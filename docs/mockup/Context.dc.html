@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>GuardRail AI · Project context</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E4E7EE}
+a{color:#3A1FD1}a:hover{color:#2A139E}
+.gr{font-family:'Plus Jakarta Sans',ui-sans-serif,system-ui,sans-serif;color:#14151A;background:#E4E7EE;min-height:100vh;padding:24px;font-size:14px;line-height:1.45}
+.gr *{box-sizing:border-box}
+.app{background:#F7F8FA;border:6px solid #FFFFFF;border-radius:28px;box-shadow:0 12px 40px rgba(30,35,60,.10);overflow:hidden;min-height:calc(100vh - 48px)}
+.shell{display:flex;flex-wrap:wrap}
+.side{flex:1 1 220px;max-width:100%;padding:4px 12px 24px}
+.main{flex:999 1 560px;min-width:0;display:flex;flex-direction:column;padding:4px 24px 40px 8px}
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;padding:22px 24px 14px;background:#ECEEF3;border-radius:18px}
+.top h1{margin:0;font-size:22px;font-weight:700;letter-spacing:-0.01em}
+.sub{margin:4px 0 0;color:#5F6475;font-size:13px}
+.step{font-size:12px;font-weight:700;color:#3A1FD1;text-transform:uppercase;letter-spacing:.06em}
+.content{padding:20px 0 0;display:flex;flex-direction:column;gap:20px}
+.row{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start}
+.card{background:#FFFFFF;border:1px solid #E6E8EE;border-radius:16px;padding:20px;min-width:0;box-shadow:0 1px 2px rgba(20,21,26,.04)}
+.card h2{margin:0;font-size:15px;font-weight:700}
+.hd{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.btn{font:inherit;font-weight:600;font-size:13px;border-radius:10px;padding:0 14px;min-height:40px;border:1px solid #E1E4EB;background:#FFFFFF;color:#14151A;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none}
+.btn:hover{border-color:#C9CDD8;color:#14151A}
+.btn.pri{background:#3A1FD1;border-color:#3A1FD1;color:#FFFFFF}
+.btn.blk{background:#111214;border-color:#111214;color:#FFFFFF}
+.btn.sm{min-height:32px;padding:0 10px;font-size:12.5px}
+.btn.dash{border-style:dashed;color:#3A1FD1;border-color:#B7ACF2}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:#F0F1F5;color:#4A4F5E;white-space:nowrap}
+.ok{background:#E3F7EA;color:#15803D}
+.warn{background:#FEF1DC;color:#A15C07}
+.info{background:#ECE9FF;color:#3A1FD1}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px}
+.muted{color:#6B7080}
+.lbl{display:block;font-size:12px;color:#6B7080;font-weight:600;margin-bottom:6px}
+.tabs{display:flex;flex-wrap:wrap;gap:22px;margin-top:14px}
+.tabs button{font:inherit;font-size:13px;font-weight:600;border:0;background:transparent;color:#4A4F5E;padding:6px 0;cursor:pointer;border-bottom:2px solid transparent}
+.tabs button.on{color:#3A1FD1;border-bottom-color:#3A1FD1}
+.doc{font:inherit;text-align:left;width:100%;display:flex;align-items:center;gap:10px;border:1px solid transparent;background:transparent;border-radius:10px;padding:8px 10px;cursor:pointer;color:#14151A}
+.doc.on{background:#F3F1FF;border-color:#DCD6FB}
+.drop{border:2px dashed #B7ACF2;border-radius:12px;padding:14px;text-align:center;font-size:12.5px;color:#3A1FD1;background:rgba(58,31,209,.04)}
+.layer{display:flex;align-items:center;gap:12px;border:1px solid #E6E8EE;border-radius:12px;padding:12px 14px;background:#FFFFFF}
+.grip{color:#A0A5B4;flex:none}
+.stack{display:flex;flex-direction:column;gap:6px}
+.blk{border-radius:12px;padding:12px 14px;font-size:13px;display:flex;justify-content:space-between;gap:12px;align-items:center}
+.b-fixed{background:#F3F1FF;border:1px solid #DCD6FB}
+.b-var{background:#FFFFFF;border:1px dashed #C9CDD8}
+.seg{display:inline-flex;flex-wrap:wrap;gap:6px}
+.seg button{font:inherit;font-size:12.5px;font-weight:600;border:1px solid #E1E4EB;background:#FFFFFF;color:#14151A;padding:0 12px;min-height:34px;border-radius:9px;cursor:pointer}
+.seg button.on{background:#111214;border-color:#111214;color:#FFFFFF}
+textarea{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;line-height:1.7;width:100%;min-height:250px;background:#FBFBFD;border:1px solid #E6E8EE;border-radius:12px;color:#14151A;padding:14px;resize:vertical}
+.sw{width:40px;height:24px;border-radius:999px;border:0;padding:3px;cursor:pointer;display:inline-flex;align-items:center;background:#D3D6DE;flex:none}
+.sw.on{background:#3A1FD1;justify-content:flex-end}
+.sw span{width:18px;height:18px;border-radius:50%;background:#FFFFFF;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+</style>
+</helmet>
+<div class="gr"><div class="app">
+  <dc-import name="Topbar" hint-size="100%,80px"></dc-import>
+  <div class="shell">
+  <div class="side"><dc-import name="Sidebar" active="context" hint-size="100%,1000px"></dc-import></div>
+  <main class="main">
+    <header class="top">
+      <div>
+        <div class="step">Step 4 of 5</div>
+        <h1>Context files</h1>
+        <p class="sub">Markdown files about your project, added to the top of every request. Attach them to a group and every key in it gets them; sub-groups inherit them.</p>
+        <div class="tabs" role="tablist" aria-label="Context role">
+          <sc-for list="{{roles}}" as="r" hint-placeholder-count="3">
+            <button type="button" role="tab" class="{{r.cls}}" onClick="{{r.pick}}">{{r.label}}</button>
+          </sc-for>
+          <button type="button" role="tab" style="color: #6B7080">+ Another group</button>
+        </div>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding-bottom: 8px">
+        <button type="button" class="btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9M7 14l5-5 5 5M4 3h16"></path></svg>
+          Upload .md
+        </button>
+        <button type="button" class="btn pri">Save and publish</button>
+      </div>
+    </header>
+
+    <div class="content">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px">
+        <div class="card"><div class="lbl">Context for {{role.name}}</div><div style="font-size: 26px; font-weight: 700">{{role.tokens}} tokens</div><div class="muted" style="font-size: 13px">{{role.files}} files, sent with every request</div></div>
+        <div class="card"><div class="lbl">Prefix cache hit rate</div><div style="font-size: 26px; font-weight: 700; color: #15803D">{{role.hit}}</div><div class="muted" style="font-size: 13px">Context is identical every time, so vLLM reuses it</div></div>
+        <div class="card"><div class="lbl">Keys that get it</div><div style="font-size: 26px; font-weight: 700">{{role.keyCount}}</div><div class="muted" style="font-size: 13px">Through the {{role.name}} group</div></div>
+        <div class="card"><div class="lbl">Version</div><div style="font-size: 26px; font-weight: 700">{{role.version}}</div><div class="muted" style="font-size: 13px">Editing a file starts a new version</div></div>
+      </div>
+
+      <div class="row">
+        <aside class="card" style="flex: 1 1 240px; max-width: 100%; padding: 14px; display: flex; flex-direction: column; gap: 6px" aria-label="Context files">
+          <div class="lbl" style="padding: 4px 6px 0">All context files</div>
+          <sc-for list="{{docs}}" as="d" hint-placeholder-count="5">
+            <button type="button" class="{{d.cls}}" onClick="{{d.pick}}">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none; color: #3A1FD1"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5M9 13h6M9 17h4"></path></svg>
+              <span style="display: flex; flex-direction: column; min-width: 0">
+                <span class="mono" style="font-size: 12.5px; font-weight: 500">{{d.name}}</span>
+                <span class="muted" style="font-size: 12px">{{d.tok}} tokens · {{d.used}}</span>
+              </span>
+            </button>
+          </sc-for>
+          <div class="drop" style="margin-top: 8px">Drop .md files here<br><span class="muted" style="font-size: 12px">or paste from your repo docs</span></div>
+        </aside>
+
+        <section class="card" style="flex: 999 1 460px; display: flex; flex-direction: column; gap: 16px">
+          <div class="hd" style="margin: 0">
+            <div>
+              <h2>{{role.name}} group context</h2>
+              <div class="muted" style="font-size: 13px">Files marked Shared come from a parent group. Drag to reorder.</div>
+            </div>
+            <button type="button" class="btn sm dash">+ Add file</button>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <sc-for list="{{layers}}" as="l" hint-placeholder-count="3">
+              <div class="layer">
+                <svg class="grip" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.6"></circle><circle cx="15" cy="6" r="1.6"></circle><circle cx="9" cy="12" r="1.6"></circle><circle cx="15" cy="12" r="1.6"></circle><circle cx="9" cy="18" r="1.6"></circle><circle cx="15" cy="18" r="1.6"></circle></svg>
+                <span class="mono" style="font-weight: 500; font-size: 12.5px; flex: 1 1 auto; min-width: 0">{{l.name}}</span>
+                <span class="{{l.tagCls}}">{{l.tag}}</span>
+                <span class="mono muted" style="width: 72px; text-align: right">{{l.tok}}</span>
+                <button type="button" class="{{l.sw}}" onClick="{{l.toggle}}" role="switch" aria-checked="{{l.on}}" aria-label="Include {{l.name}}"><span></span></button>
+              </div>
+            </sc-for>
+          </div>
+
+          <div>
+            <span class="lbl">Keys in the {{role.name}} group</span>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
+              <sc-for list="{{role.keys}}" as="k" hint-placeholder-count="2">
+                <span class="pill info mono" style="font-size: 12px">{{k}}</span>
+              </sc-for>
+              <a class="btn sm dash" href="Groups.dc.html">Manage group</a>
+            </div>
+          </div>
+
+          <div>
+            <span class="lbl">Where the context goes</span>
+            <div class="seg" role="group" aria-label="Placement">
+              <sc-for list="{{places}}" as="p" hint-placeholder-count="2">
+                <button type="button" class="{{p.cls}}" onClick="{{p.pick}}">{{p.label}}</button>
+              </sc-for>
+            </div>
+            <div class="muted" style="font-size: 12px; margin-top: 6px">{{placeHelp}}</div>
+          </div>
+        </section>
+
+        <section class="card" style="flex: 1 1 320px; display: flex; flex-direction: column; gap: 12px">
+          <div>
+            <h2>What the model receives</h2>
+            <div class="muted" style="font-size: 13px">For a request from a {{role.name}} key</div>
+          </div>
+          <div class="stack">
+            <div class="blk b-fixed"><span><b>1.</b> Gateway policy prompt</span><span class="pill ok">Cached</span></div>
+            <div class="blk b-fixed"><span><b>2.</b> {{role.name}} project context · {{role.tokens}} tokens</span><span class="pill ok">Cached</span></div>
+            <div class="blk b-var"><span><b>3.</b> The agent's own system prompt</span><span class="pill">Varies</span></div>
+            <div class="blk b-var"><span><b>4.</b> Conversation and tool results</span><span class="pill">Varies</span></div>
+          </div>
+          <div style="background: #F7F8FA; border-radius: 12px; padding: 12px; font-size: 12.5px; color: #4A4F5E">Parts 1 and 2 never change between requests with the same role, so vLLM serves them from its prefix cache instead of recomputing them. Only parts 3 and 4 cost new prefill.</div>
+        </section>
+      </div>
+
+      <section class="card">
+        <div class="hd">
+          <div>
+            <h2 class="mono" style="font-size: 14px">{{doc.name}}</h2>
+            <div class="muted" style="font-size: 13px">{{doc.meta}}</div>
+          </div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap">
+            <button type="button" class="btn sm">History</button>
+            <button type="button" class="btn sm">Replace with upload</button>
+            <button type="button" class="btn sm blk">Save file</button>
+          </div>
+        </div>
+        <textarea aria-label="File contents" value="{{doc.body}}"></textarea>
+      </section>
+    </div>
+  </main>
+  </div>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1400}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { role: 0, doc: 1, off: {}, place: 'top' }; }
+  renderVals() {
+    const docs = [
+      { name: 'project-overview.md', tok: '3,420', used: 'all roles', meta: 'v7 · shared by every role · edited 2 days ago',
+        body: '# Project overview\n\nProduct: [YOUR PRODUCT NAME], a web app for [WHAT IT DOES].\nRepo layout:\n- apps/web      React frontend\n- services/api  Python FastAPI backend\n- tests/e2e     Playwright end-to-end tests\n\nConventions:\n- Branch from main, small PRs, conventional commits\n- Never commit secrets; config comes from env vars\n' },
+      { name: 'frontend.md', tok: '1,860', used: 'Frontend', meta: 'v4 · Frontend role · edited 5 hours ago',
+        body: '# Frontend context\n\nStack: React, TypeScript, Vite, Tailwind\nWork only inside apps/web.\n\nRules:\n- Use components from src/ui before writing new ones\n- All API calls go through src/api/client.ts\n- Tests: Vitest and Testing Library, run `pnpm test`\n- Do not edit services/ or database migrations\n' },
+      { name: 'backend.md', tok: '2,240', used: 'Backend', meta: 'v6 · Backend role · edited yesterday',
+        body: '# Backend context\n\nStack: Python 3.12, FastAPI, SQLAlchemy, Postgres\nWork only inside services/api.\n\nRules:\n- Every endpoint needs a pydantic schema and a test\n- Migrations through Alembic, never edit old ones\n- Run `pytest -q` before saying a task is done\n' },
+      { name: 'qa.md', tok: '1,310', used: 'QA', meta: 'v3 · QA role · edited 3 days ago',
+        body: '# QA context\n\nYou write and run tests; you do not change app code.\n\n- E2E tests live in tests/e2e (Playwright)\n- File a bug report in docs/bugs/ for each failure\n- Test accounts come from tests/fixtures/users.json\n' },
+      { name: 'security-policy.md', tok: '640', used: 'Frontend, Backend', meta: 'v2 · shared · edited last week',
+        body: '# Security policy\n\n- Never print or move .env files, keys or tokens\n- No curl | bash, no installs outside the lockfile\n- Ask before deleting files outside the task\n' }
+    ];
+    const R = [
+      { name: 'Frontend', files: [0, 1, 4], tokens: '5,920', hit: '97%', keys: ['rafi-laptop-cline', 'ui-team'], version: 'v12' },
+      { name: 'Backend', files: [0, 2, 4], tokens: '6,300', hit: '98%', keys: ['rafi-claude-code', 'platform-team'], version: 'v9' },
+      { name: 'QA', files: [0, 3], tokens: '4,730', hit: '99%', keys: ['ci-runner'], version: 'v5' }
+    ];
+    const ri = this.state.role;
+    const r = R[ri];
+    const roles = R.map((x, i) => ({ label: x.name, cls: i === ri ? 'on' : '', pick: () => this.setState({ role: i, doc: x.files[1], off: {} }) }));
+    const role = { ...r, files: r.files.length, keyCount: String(r.keys.length) };
+    const layers = r.files.map((fi) => {
+      const on = !this.state.off[fi];
+      const shared = docs[fi].used !== r.name;
+      return { name: docs[fi].name, tok: docs[fi].tok, tag: shared ? 'Shared' : 'Role only', tagCls: shared ? 'pill' : 'pill info',
+        on: on ? 'true' : 'false', sw: on ? 'sw on' : 'sw', toggle: () => this.setState({ off: { ...this.state.off, [fi]: on } }) };
+    });
+    const list = docs.map((d, i) => ({ ...d, cls: i === this.state.doc ? 'doc on' : 'doc', pick: () => this.setState({ doc: i }) }));
+    const places = [['top', 'Top of the prompt (cached)'], ['end', 'Before the last message (not cached)']].map((p) => ({ label: p[1], cls: p[0] === this.state.place ? 'on' : '', pick: () => this.setState({ place: p[0] }) }));
+    const placeHelp = this.state.place === 'top'
+      ? 'Recommended. The context sits at the very start of the request, so it is the same prefix every time and stays in the cache.'
+      : 'The model pays more attention to it, but it has to be recomputed on every request.';
+    return { roles, role, layers, docs: list, doc: docs[this.state.doc], places, placeHelp };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>GuardRail AI · Pipeline editor</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E4E7EE}
+a{color:#3A1FD1}a:hover{color:#2A139E}
+.gr{font-family:'Plus Jakarta Sans',ui-sans-serif,system-ui,sans-serif;color:#14151A;background:#E4E7EE;min-height:100vh;padding:24px;font-size:14px;line-height:1.45}
+.gr *{box-sizing:border-box}
+.app{background:#F7F8FA;border:6px solid #FFFFFF;border-radius:28px;box-shadow:0 12px 40px rgba(30,35,60,.10);overflow:hidden;min-height:calc(100vh - 48px)}
+.shell{display:flex;flex-wrap:wrap}
+.side{flex:1 1 220px;max-width:100%;padding:4px 12px 24px}
+.main{flex:999 1 560px;min-width:0;display:flex;flex-direction:column;padding:4px 24px 40px 8px}
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;padding:22px 24px;background:#ECEEF3;border-radius:18px}
+.top h1{margin:0;font-size:22px;font-weight:700;letter-spacing:-0.01em}
+.sub{margin:4px 0 0;color:#5F6475;font-size:13px}
+.content{padding:20px 0 0;display:flex;flex-direction:column;gap:20px}
+.card{background:#FFFFFF;border:1px solid #E6E8EE;border-radius:16px;padding:20px;min-width:0;box-shadow:0 1px 2px rgba(20,21,26,.04)}
+.card h2{margin:0;font-size:15px;font-weight:700}
+.btn{font:inherit;font-weight:600;font-size:13px;border-radius:10px;padding:0 14px;min-height:40px;border:1px solid #E1E4EB;background:#FFFFFF;color:#14151A;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none}
+.btn:hover{border-color:#C9CDD8;color:#14151A}
+.btn.pri{background:#3A1FD1;border-color:#3A1FD1;color:#FFFFFF}
+.btn.sm{min-height:32px;padding:0 10px;font-size:12.5px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:#F0F1F5;color:#4A4F5E;white-space:nowrap}
+.ok{background:#E3F7EA;color:#15803D}
+.warn{background:#FEF1DC;color:#A15C07}
+.info{background:#ECE9FF;color:#3A1FD1}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px}
+.muted{color:#6B7080}
+.lbl{display:block;font-size:12px;color:#6B7080;font-weight:600;margin-bottom:6px}
+.tabs{display:flex;flex-wrap:wrap;gap:20px;margin-top:12px}
+.tabs button{font:inherit;font-size:13px;font-weight:600;border:0;background:transparent;color:#4A4F5E;padding:6px 0;cursor:pointer;border-bottom:2px solid transparent}
+.tabs button.on{color:#3A1FD1;border-bottom-color:#3A1FD1}
+.pal{display:flex;align-items:center;gap:10px;width:100%;font:inherit;font-size:13px;font-weight:600;text-align:left;padding:0 10px;min-height:40px;border:1px solid #E6E8EE;border-radius:10px;background:#FFFFFF;color:#14151A;cursor:grab}
+.pal:hover{border-color:#C9C2F5;background:#FAF9FF}
+.grip{color:#A0A5B4}
+.canvas{background-color:#F7F8FA;background-image:radial-gradient(#D7DAE2 1px,transparent 1px);background-size:16px 16px;border:1px solid #E6E8EE;border-radius:16px;padding:24px;display:flex;flex-wrap:wrap;gap:32px;justify-content:center;min-width:0}
+.lane{flex:1 1 260px;max-width:340px;display:flex;flex-direction:column;align-items:stretch}
+.lane h3{margin:0 0 12px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6B7080;text-align:center}
+.wire{width:2px;height:14px;background:#C9CDD8;align-self:center}
+.node{font:inherit;text-align:left;width:100%;border-radius:12px;padding:10px 12px;cursor:pointer;display:flex;flex-direction:column;gap:2px;color:#14151A}
+.node b{font-size:13.5px;font-weight:700}
+.node span{font-size:12px;color:#5F6475}
+.n-core{background:#FFFFFF;border:1px solid #DDE0E7;box-shadow:0 1px 2px rgba(20,21,26,.05)}
+.n-script{background:#F3F1FF;border:1px solid #C9C2F5}
+.n-rule{background:#FFF8EC;border:1px solid #F1D7A6}
+.n-off{background:#F7F8FA;border:1px dashed #C9CDD8;color:#6B7080}
+.n-end{background:#111214;border:1px solid #111214;color:#FFFFFF;cursor:default}
+.n-end span{color:#C9CDD8}
+.sel{box-shadow:0 0 0 3px #3A1FD1}
+.hook{align-self:center;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;color:#3A1FD1;background:#FFFFFF;border:1px solid #DCD6FB;border-radius:999px;padding:2px 10px}
+.drop{border:2px dashed #9C8EEB;border-radius:12px;padding:12px;text-align:center;font-size:12.5px;font-weight:600;color:#3A1FD1;background:rgba(58,31,209,.05)}
+.kv{display:grid;grid-template-columns:110px minmax(0,1fr);gap:10px 12px;font-size:13px;align-items:center}
+.kv dt{color:#6B7080}
+.kv dd{margin:0;min-width:0}
+.seg{display:inline-flex;flex-wrap:wrap;gap:6px}
+.seg button{font:inherit;font-size:12.5px;font-weight:600;border:1px solid #E1E4EB;background:#FFFFFF;color:#14151A;padding:0 12px;min-height:32px;border-radius:9px;cursor:pointer}
+.seg button.on{background:#111214;border-color:#111214;color:#FFFFFF}
+</style>
+</helmet>
+<div class="gr"><div class="app">
+  <dc-import name="Topbar" hint-size="100%,80px"></dc-import>
+  <div class="shell">
+  <div class="side"><dc-import name="Sidebar" active="pipeline" hint-size="100%,1000px"></dc-import></div>
+  <main class="main">
+    <header class="top">
+      <div>
+        <h1>Pipeline editor</h1>
+        <p class="sub">Drag stages, rules and scripts onto a run point. Each key, team or route can have its own pipeline.</p>
+        <div class="tabs" role="tablist" aria-label="Pipeline">
+          <sc-for list="{{scopes}}" as="t" hint-placeholder-count="4">
+            <button type="button" role="tab" class="{{t.cls}}" onClick="{{t.pick}}">{{t.label}}</button>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center">
+        <span class="pill warn">Draft v15 · 3 changes</span>
+        <button type="button" class="btn">Test with replayed traffic</button>
+        <button type="button" class="btn">Version history</button>
+        <button type="button" class="btn pri">Publish</button>
+      </div>
+    </header>
+
+    <div class="content">
+      <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+        <aside class="card" style="flex: 1 1 210px; max-width: 100%; padding: 16px; display: flex; flex-direction: column; gap: 8px" aria-label="Node library">
+          <div class="lbl" style="margin: 0 0 4px">Built-in stages</div>
+          <sc-for list="{{builtins}}" as="p" hint-placeholder-count="9">
+            <button type="button" class="pal">
+              <svg class="grip" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.6"></circle><circle cx="15" cy="6" r="1.6"></circle><circle cx="9" cy="12" r="1.6"></circle><circle cx="15" cy="12" r="1.6"></circle><circle cx="9" cy="18" r="1.6"></circle><circle cx="15" cy="18" r="1.6"></circle></svg>
+              {{p}}
+            </button>
+          </sc-for>
+          <div class="lbl" style="margin: 12px 0 4px">Custom</div>
+          <button type="button" class="pal" style="background: #FFF8EC; border-color: #F1D7A6">
+            <svg class="grip" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.6"></circle><circle cx="15" cy="6" r="1.6"></circle><circle cx="9" cy="12" r="1.6"></circle><circle cx="15" cy="12" r="1.6"></circle><circle cx="9" cy="18" r="1.6"></circle><circle cx="15" cy="18" r="1.6"></circle></svg>
+            No-code rule
+          </button>
+          <button type="button" class="pal" style="background: #F3F1FF; border-color: #C9C2F5">
+            <svg class="grip" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.6"></circle><circle cx="15" cy="6" r="1.6"></circle><circle cx="9" cy="12" r="1.6"></circle><circle cx="15" cy="12" r="1.6"></circle><circle cx="9" cy="18" r="1.6"></circle><circle cx="15" cy="18" r="1.6"></circle></svg>
+            Python script
+          </button>
+          <div class="muted" style="font-size: 12px; margin-top: 8px">Drop a node on a run point. Click a node to edit it.</div>
+        </aside>
+
+        <section class="canvas" style="flex: 999 1 560px" aria-label="Pipeline canvas">
+          <div class="lane">
+            <h3>Request</h3>
+            <sc-for list="{{req}}" as="n" hint-placeholder-count="14">
+              <sc-if value="{{n.notFirst}}" hint-placeholder-val="{{ true }}"><div class="wire"></div></sc-if>
+              <sc-if value="{{n.isHook}}" hint-placeholder-val="{{ false }}"><div class="hook">{{n.label}}</div></sc-if>
+              <sc-if value="{{n.isDrop}}" hint-placeholder-val="{{ false }}"><div class="drop">Drop a rule or script here</div></sc-if>
+              <sc-if value="{{n.isNode}}" hint-placeholder-val="{{ true }}">
+                <button type="button" class="{{n.cls}}" onClick="{{n.pick}}"><b>{{n.label}}</b><span>{{n.sub}}</span></button>
+              </sc-if>
+            </sc-for>
+          </div>
+          <div class="lane">
+            <h3>Response</h3>
+            <sc-for list="{{res}}" as="n" hint-placeholder-count="10">
+              <sc-if value="{{n.notFirst}}" hint-placeholder-val="{{ true }}"><div class="wire"></div></sc-if>
+              <sc-if value="{{n.isHook}}" hint-placeholder-val="{{ false }}"><div class="hook">{{n.label}}</div></sc-if>
+              <sc-if value="{{n.isDrop}}" hint-placeholder-val="{{ false }}"><div class="drop">Drop a rule or script here</div></sc-if>
+              <sc-if value="{{n.isNode}}" hint-placeholder-val="{{ true }}">
+                <button type="button" class="{{n.cls}}" onClick="{{n.pick}}"><b>{{n.label}}</b><span>{{n.sub}}</span></button>
+              </sc-if>
+            </sc-for>
+          </div>
+        </section>
+
+        <aside class="card" style="flex: 1 1 280px; max-width: 100%; display: flex; flex-direction: column; gap: 16px" aria-label="Node settings">
+          <div>
+            <span class="{{d.badge}}">{{d.kind}}</span>
+            <h2 style="margin-top: 10px">{{d.label}}</h2>
+            <div class="muted" style="font-size: 13px; margin-top: 2px">{{d.sub}}</div>
+          </div>
+          <dl class="kv" style="margin: 0">
+            <sc-for list="{{d.fields}}" as="f" hint-placeholder-count="5">
+              <dt>{{f.k}}</dt><dd>{{f.v}}</dd>
+            </sc-for>
+          </dl>
+          <div>
+            <span class="lbl">Mode</span>
+            <div class="seg" role="group" aria-label="Mode">
+              <sc-for list="{{modes}}" as="m" hint-placeholder-count="3">
+                <button type="button" class="{{m.cls}}" onClick="{{m.pick}}">{{m.label}}</button>
+              </sc-for>
+            </div>
+            <div class="muted" style="font-size: 12px; margin-top: 6px">{{modeHelp}}</div>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto">
+            <a class="btn" href="{{d.href}}">{{d.open}}</a>
+            <button type="button" class="btn">Remove</button>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </main>
+  </div>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1120}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { sel: 'block-rm-rf', scope: 'default', mode: 'Enforce' }; }
+  renderVals() {
+    const N = (label, sub, kind, fields) => ({ t: 'node', label, sub, kind, fields: fields || [] });
+    const H = (label) => ({ t: 'hook', label });
+    const reqList = [
+      { t: 'node', label: 'Client request', sub: 'Cline, Claude Code, any agent', kind: 'end' },
+      H('on_receive'),
+      N('Auth and source check', 'API key, IP allowlist, rate limit', 'core', [['Key header', 'Bearer or x-api-key'], ['Unknown IP', 'Reject 401'], ['Rate limit', 'Per key']]),
+      H('after_auth'),
+      N('team-quota', 'Rule · 2M tokens per team per day', 'rule', [['Run point', 'after_auth'], ['When', 'team tokens today > 2,000,000'], ['Then', 'Block with 429']]),
+      N('Schema detection', 'Strict · OpenAI Chat Completions', 'core', [['Policy', 'Strict, from key settings'], ['On mismatch', '422 with suggestion']]),
+      H('after_schema'),
+      N('block-rm-rf', 'Python script · destructive commands', 'script', [['Run point', 'after_schema'], ['Timeout', '50 ms'], ['Memory', '128 MB'], ['Network', 'None'], ['On error', 'Fail closed']]),
+      N('secrets-redact', 'Rule · mask API keys and .env values', 'rule', [['Run point', 'after_schema'], ['When', 'regex matches secret patterns'], ['Then', 'Redact and log']]),
+      { t: 'drop' },
+      N('PIGuard', 'Tier 1 guard · every request', 'core', [['Scans', 'New content only'], ['Escalate at', '0.70'], ['Block at', '0.98']]),
+      N('Policy judge', 'gpt-oss-safeguard-20b · escalations', 'core', [['Reasoning', 'Low'], ['Timeout', '1.5 s'], ['On timeout', 'Block']]),
+      H('after_guard'),
+      N('Project context', 'Role context from the key · cached', 'core', [['Source', 'Context role linked to the key'], ['Placement', 'Top of the prompt'], ['Cache', 'Prefix cached by vLLM']]),
+      N('System prompt injection', 'policy: core-coding-v3', 'core', [['Merge', 'Prepend to client prompt'], ['Prompt', 'core-coding-v3']]),
+      N('Tool injection', '+2 gateway tools (MCP)', 'core', [['Tools', 'search_docs, run_tests'], ['Executed by', 'Gateway']]),
+      N('Translation', 'Anthropic to OpenAI when needed', 'core', [['Native', 'OpenAI Chat, Responses'], ['Translated', 'Anthropic, Ollama, Gemini']]),
+      H('before_forward'),
+      { t: 'node', label: 'vLLM pool: coding', sub: 'spark-01, spark-02', kind: 'end' }
+    ];
+    const resList = [
+      { t: 'node', label: 'vLLM stream', sub: 'Server-sent events', kind: 'end' },
+      H('on_stream_chunk'),
+      N('Output scan', 'Off · Qwen3Guard Stream', 'off', [['Status', 'Disabled'], ['Model', 'Qwen3Guard Stream']]),
+      H('on_tool_call'),
+      N('deny-outside-repo', 'Rule · file paths outside the project', 'rule', [['Run point', 'on_tool_call'], ['When', 'path not under workspace'], ['Then', 'Block tool call']]),
+      H('on_response'),
+      N('tag-usage-cost', 'Python script · cost per team', 'script', [['Run point', 'on_response'], ['Timeout', '20 ms'], ['On error', 'Fail open']]),
+      H('before_log'),
+      N('redact-log-bodies', 'Rule · strip prompt text', 'rule', [['Run point', 'before_log'], ['Then', 'Store hashes only']]),
+      { t: 'node', label: 'Client and access log', sub: 'Reply streamed, row written', kind: 'end' }
+    ];
+    const cls = { core: 'node n-core', script: 'node n-script', rule: 'node n-rule', off: 'node n-off', end: 'node n-end' };
+    const sel = this.state.sel;
+    const map = (list) => list.map((n, i) => ({
+      ...n,
+      notFirst: i > 0,
+      isHook: n.t === 'hook', isDrop: n.t === 'drop', isNode: n.t === 'node',
+      cls: (cls[n.kind] || '') + (n.label === sel ? ' sel' : ''),
+      pick: () => { if (n.kind !== 'end') this.setState({ sel: n.label }); }
+    }));
+    const found = reqList.concat(resList).find((n) => n.label === sel) || reqList[7];
+    const kindName = { core: 'Built-in stage', script: 'Python script', rule: 'No-code rule', off: 'Built-in stage' };
+    const badge = { core: 'pill', script: 'pill info', rule: 'pill warn', off: 'pill' };
+    const d = {
+      label: found.label, sub: found.sub, kind: kindName[found.kind], badge: badge[found.kind],
+      fields: found.fields.map((f) => ({ k: f[0], v: f[1] })),
+      href: found.kind === 'script' ? 'Scripts.dc.html' : found.kind === 'rule' ? 'Rules.dc.html' : 'Guard.dc.html',
+      open: found.kind === 'script' ? 'Open in script editor' : found.kind === 'rule' ? 'Open rule' : 'Open settings'
+    };
+    const help = { Enforce: 'Runs on live traffic and can block.', Shadow: 'Runs on live traffic and logs what it would do, without blocking.', Off: 'Skipped. Kept in the pipeline for later.' };
+    const modes = ['Enforce', 'Shadow', 'Off'].map((m) => ({ label: m, cls: m === this.state.mode ? 'on' : '', pick: () => this.setState({ mode: m }) }));
+    const scopes = ['default', 'team: platform', 'key: ci-runner', 'route: /v1/messages'].map((s) => ({ label: s, cls: s === this.state.scope ? 'on' : '', pick: () => this.setState({ scope: s }) }));
+    const builtins = ['Auth and source check', 'Schema detection', 'PIGuard', 'Policy judge', 'Project context', 'System prompt injection', 'Tool injection', 'Translation', 'Router', 'Output scan'];
+    return { req: map(reqList), res: map(resList), d, modes, modeHelp: help[this.state.mode], scopes, builtins };
+  }
+}
+</script>
+</body>
+</html>

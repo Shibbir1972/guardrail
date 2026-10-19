@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>GuardRail AI · Servers and models</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E4E7EE}
+a{color:#3A1FD1}a:hover{color:#2A139E}
+.gr{font-family:'Plus Jakarta Sans',ui-sans-serif,system-ui,sans-serif;color:#14151A;background:#E4E7EE;min-height:100vh;padding:24px;font-size:14px;line-height:1.45}
+.gr *{box-sizing:border-box}
+.app{background:#F7F8FA;border:6px solid #FFFFFF;border-radius:28px;box-shadow:0 12px 40px rgba(30,35,60,.10);overflow:hidden;min-height:calc(100vh - 48px)}
+.shell{display:flex;flex-wrap:wrap}
+.side{flex:1 1 220px;max-width:100%;padding:4px 12px 24px}
+.main{flex:999 1 560px;min-width:0;display:flex;flex-direction:column;padding:4px 24px 40px 8px}
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;padding:22px 24px;background:#ECEEF3;border-radius:18px}
+.top h1{margin:0;font-size:22px;font-weight:700;letter-spacing:-0.01em}
+.sub{margin:4px 0 0;color:#5F6475;font-size:13px}
+.step{font-size:12px;font-weight:700;color:#3A1FD1;text-transform:uppercase;letter-spacing:.06em}
+.content{padding:20px 0 0;display:flex;flex-direction:column;gap:20px}
+.row{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start}
+.card{background:#FFFFFF;border:1px solid #E6E8EE;border-radius:16px;padding:20px;min-width:0;box-shadow:0 1px 2px rgba(20,21,26,.04)}
+.card h2{margin:0;font-size:15px;font-weight:700}
+.hd{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.btn{font:inherit;font-weight:600;font-size:13px;border-radius:10px;padding:0 14px;min-height:40px;border:1px solid #E1E4EB;background:#FFFFFF;color:#14151A;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none}
+.btn:hover{border-color:#C9CDD8;color:#14151A}
+.btn.pri{background:#3A1FD1;border-color:#3A1FD1;color:#FFFFFF}
+.btn.blk{background:#111214;border-color:#111214;color:#FFFFFF}
+.btn.sm{min-height:32px;padding:0 10px;font-size:12.5px}
+.btn.dash{border-style:dashed;color:#3A1FD1;border-color:#B7ACF2}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:#F0F1F5;color:#4A4F5E;white-space:nowrap}
+.ok{background:#E3F7EA;color:#15803D}
+.warn{background:#FEF1DC;color:#A15C07}
+.info{background:#ECE9FF;color:#3A1FD1}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px}
+.muted{color:#6B7080}
+.lbl{display:block;font-size:12px;color:#6B7080;font-weight:600;margin-bottom:6px}
+.inp{font:inherit;font-size:13px;background:#FFFFFF;border:1px solid #E1E4EB;border-radius:10px;color:#14151A;padding:0 12px;min-height:44px;width:100%}
+.found{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:10px 12px;border:1px solid #E6E8EE;border-radius:12px;background:#FFFFFF;font-size:13px}
+.found input{width:16px;height:16px;accent-color:#3A1FD1}
+.srv{display:flex;flex-direction:column;gap:12px}
+.mrow{display:grid;grid-template-columns:minmax(180px,1.4fr) minmax(90px,.6fr) minmax(160px,1.2fr) minmax(150px,1fr);gap:12px;align-items:center;padding:12px 4px;border-top:1px solid #F0F1F5;font-size:13px}
+.nest{border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+</style>
+</helmet>
+<div class="gr"><div class="app">
+  <dc-import name="Topbar" hint-size="100%,80px"></dc-import>
+  <div class="shell">
+  <div class="side"><dc-import name="Sidebar" active="backends" hint-size="100%,1000px"></dc-import></div>
+  <main class="main">
+    <header class="top">
+      <div>
+        <div class="step">Step 1 of 5</div>
+        <h1>Servers and models</h1>
+        <p class="sub">Paste a vLLM server address. GuardRail finds the models it serves on its own.</p>
+      </div>
+      <a href="Groups.dc.html" class="btn blk">Next: groups</a>
+    </header>
+
+    <div class="content">
+      <section class="card">
+        <div class="hd" style="margin-bottom: 12px"><h2>Add a server</h2></div>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end">
+          <label style="flex: 3 1 320px"><span class="lbl">vLLM address</span><input class="inp mono" type="text" value="http://10.0.1.5:8000"></label>
+          <label style="flex: 1 1 200px"><span class="lbl">Server API key (optional)</span><input class="inp mono" type="password" value="vllm-secret"></label>
+          <button type="button" class="btn pri" style="min-height: 44px" onClick="{{discover}}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+            Discover models
+          </button>
+        </div>
+        <sc-if value="{{found}}" hint-placeholder-val="{{ true }}">
+          <div style="margin-top: 16px; display: flex; flex-direction: column; gap: 8px">
+            <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 13px"><span class="pill ok">Connected · 38 ms</span><span class="muted">Found 2 models. Pick the ones clients may use.</span></div>
+            <label class="found"><input type="checkbox" checked><span class="mono" style="font-weight: 500; flex: 1 1 200px">qwen3-coder-480b-fp8</span><span class="muted">256k context</span><span class="pill">Tool calling</span></label>
+            <label class="found"><input type="checkbox" checked><span class="mono" style="font-weight: 500; flex: 1 1 200px">qwen3-coder-30b</span><span class="muted">256k context</span><span class="pill">Tool calling</span></label>
+            <div style="display: flex; justify-content: flex-end; gap: 8px"><input class="inp" style="width: 220px; min-height: 40px" type="text" value="h100-node-1" aria-label="Server name"><button type="button" class="btn blk">Save server</button></div>
+          </div>
+        </sc-if>
+      </section>
+
+      <div class="row">
+        <div style="flex: 999 1 560px; display: flex; flex-direction: column; gap: 20px; min-width: 0">
+          <sc-for list="{{servers}}" as="s" hint-placeholder-count="2">
+            <section class="card srv">
+              <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between">
+                <div style="display: flex; gap: 12px; align-items: center">
+                  <div style="width: 40px; height: 40px; border-radius: 12px; background: #ECE9FF; color: #3A1FD1; display: flex; align-items: center; justify-content: center">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="7" rx="2"></rect><rect x="3" y="13" width="18" height="7" rx="2"></rect><path d="M7 7.5h.01M7 16.5h.01"></path></svg>
+                  </div>
+                  <div><div style="font-weight: 700">{{s.name}}</div><div class="mono muted">{{s.url}}</div></div>
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center"><span class="pill ok">{{s.health}}</span><span class="pill">{{s.note}}</span><button type="button" class="btn sm">Rediscover</button><button type="button" class="btn sm">Server rule</button></div>
+              </div>
+              <div>
+                <div class="mrow" style="border-top: 0; padding-top: 0; font-size: 12px; color: #6B7080; font-weight: 600"><span>Model (found automatically)</span><span>Context</span><span>Groups that can use it</span><span>Rule</span></div>
+                <sc-for list="{{s.models}}" as="m" hint-placeholder-count="2">
+                  <div class="mrow">
+                    <span class="mono" style="font-weight: 500; font-size: 12.5px">{{m.name}}</span>
+                    <span class="muted">{{m.ctx}}</span>
+                    <span>{{m.groups}}</span>
+                    <span><span class="{{m.rcls}}">{{m.rule}}</span></span>
+                  </div>
+                </sc-for>
+              </div>
+            </section>
+          </sc-for>
+        </div>
+
+        <aside class="card" style="flex: 1 1 300px; display: flex; flex-direction: column; gap: 14px">
+          <div>
+            <h2>Where a rule applies</h2>
+            <div class="muted" style="font-size: 13px; margin-top: 2px">Set a rule at any level. The narrowest one wins.</div>
+          </div>
+          <div class="nest" style="background: #F7F8FA; border: 1px solid #E6E8EE">
+            <div style="display: flex; justify-content: space-between; gap: 8px"><b style="font-size: 13px">All servers</b><span class="pill">Global</span></div>
+            <div class="muted" style="font-size: 12.5px">Guard on · 120 requests/min per key</div>
+            <div class="nest" style="background: #FFFFFF; border: 1px solid #E6E8EE">
+              <div style="display: flex; justify-content: space-between; gap: 8px"><b style="font-size: 13px">One server: spark-02</b><span class="pill">Server</span></div>
+              <div class="muted" style="font-size: 12.5px">Only the CI bots group</div>
+              <div class="nest" style="background: #F3F1FF; border: 1px solid #DCD6FB">
+                <div style="display: flex; justify-content: space-between; gap: 8px"><b style="font-size: 13px">One model: qwen3-coder-480b-fp8</b><span class="pill info">Model</span></div>
+                <div style="font-size: 12.5px; color: #3E3A66">Engineering only · 30 requests/min</div>
+              </div>
+            </div>
+          </div>
+          <button type="button" class="btn dash">+ Add a rule</button>
+          <div class="muted" style="font-size: 12px">Who may use a server or model is set on groups. These rules are limits that apply to everyone.</div>
+        </aside>
+      </div>
+    </div>
+  </main>
+  </div>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1120}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { found: true }; }
+  renderVals() {
+    const servers = [
+      { name: 'spark-01', url: 'http://10.0.0.21:8000', health: 'Online · 42 ms', note: '3 models',
+        models: [
+          { name: 'qwen3-coder-30b', ctx: '256k', groups: 'Engineering, QA, CI bots', rule: 'Global rules', rcls: 'pill' },
+          { name: 'qwen3-coder-480b-fp8', ctx: '256k', groups: 'Engineering', rule: '30 requests/min', rcls: 'pill info' },
+          { name: 'gpt-oss-120b', ctx: '128k', groups: 'Engineering', rule: 'Global rules', rcls: 'pill' }
+        ] },
+      { name: 'spark-02', url: 'http://10.0.0.22:8000', health: 'Online · 45 ms', note: 'Server rule: CI bots only',
+        models: [
+          { name: 'qwen3-coder-30b', ctx: '256k', groups: 'CI bots', rule: 'Server rule', rcls: 'pill warn' }
+        ] },
+      { name: 'guard-node', url: 'http://10.0.0.30:8001', health: 'Online · 9 ms', note: 'Guard models, not for clients',
+        models: [
+          { name: 'PIGuard', ctx: '512 tokens', groups: 'Internal: first check', rule: 'Hidden from clients', rcls: 'pill' },
+          { name: 'gpt-oss-safeguard-20b', ctx: '128k', groups: 'Internal: second check', rule: 'Hidden from clients', rcls: 'pill' }
+        ] }
+    ];
+    return { servers, found: this.state.found, discover: () => this.setState({ found: true }) };
+  }
+}
+</script>
+</body>
+</html>

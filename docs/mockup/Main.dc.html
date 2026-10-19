@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>GuardRail AI · Dashboard</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E4E7EE}
+a{color:#3A1FD1}a:hover{color:#2A139E}
+.gr{font-family:'Plus Jakarta Sans',ui-sans-serif,system-ui,sans-serif;color:#14151A;background:#E4E7EE;min-height:100vh;padding:24px;font-size:14px;line-height:1.45}
+.gr *{box-sizing:border-box}
+.app{background:#F7F8FA;border:6px solid #FFFFFF;border-radius:28px;box-shadow:0 12px 40px rgba(30,35,60,.10);overflow:hidden;min-height:calc(100vh - 48px)}
+.shell{display:flex;flex-wrap:wrap}
+.side{flex:1 1 220px;max-width:100%;padding:4px 12px 24px}
+.main{flex:999 1 560px;min-width:0;display:flex;flex-direction:column;padding:4px 24px 40px 8px}
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;padding:22px 24px;background:#ECEEF3;border-radius:18px}
+.top h1{margin:0;font-size:22px;font-weight:700;letter-spacing:-0.01em}
+.sub{margin:4px 0 0;color:#5F6475;font-size:13px}
+.content{padding:20px 0 0;display:flex;flex-direction:column;gap:20px}
+.row{display:flex;flex-wrap:wrap;gap:20px}
+.card{background:#FFFFFF;border:1px solid #E6E8EE;border-radius:16px;padding:20px;min-width:0;box-shadow:0 1px 2px rgba(20,21,26,.04)}
+.card h2{margin:0;font-size:15px;font-weight:700}
+.hd{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+.btn{font:inherit;font-weight:600;font-size:13px;border-radius:10px;padding:0 14px;min-height:40px;border:1px solid #E1E4EB;background:#FFFFFF;color:#14151A;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none}
+.btn:hover{border-color:#C9CDD8;color:#14151A}
+.btn.pri{background:#3A1FD1;border-color:#3A1FD1;color:#FFFFFF}
+.btn.blk{background:#111214;border-color:#111214;color:#FFFFFF}
+.btn.pri:hover{background:#2E17B0}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:#F0F1F5;color:#4A4F5E;white-space:nowrap}
+.ok{background:#E3F7EA;color:#15803D}
+.bad{background:#FDE8E8;color:#B42318}
+.warn{background:#FEF1DC;color:#A15C07}
+.info{background:#ECE9FF;color:#3A1FD1}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px}
+.muted{color:#6B7080}
+.lbl{font-size:12px;color:#6B7080;font-weight:500}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{text-align:left;font-weight:500;color:#6B7080;font-size:12px;padding:10px 12px;border-bottom:1px solid #E6E8EE;white-space:nowrap}
+.tbl td{padding:12px;border-bottom:1px solid #F0F1F5;vertical-align:middle}
+.tbl tr:last-child td{border-bottom:0}
+.scroll{overflow-x:auto}
+.seg{display:inline-flex;flex-wrap:wrap;gap:6px}
+.seg button{font:inherit;font-size:12.5px;font-weight:600;border:1px solid #E1E4EB;background:#FFFFFF;color:#14151A;padding:0 14px;min-height:34px;border-radius:9px;cursor:pointer}
+.seg button.on{background:#111214;border-color:#111214;color:#FFFFFF}
+.kpi .big{font-size:30px;font-weight:600;letter-spacing:-0.02em;margin:6px 0 2px}
+.bar{flex:1 1 0;min-width:4px;border-radius:4px 4px 0 0}
+</style>
+</helmet>
+<div class="gr"><div class="app">
+  <dc-import name="Topbar" hint-size="100%,80px"></dc-import>
+  <div class="shell">
+  <div class="side"><dc-import name="Sidebar" active="dashboard" hint-size="100%,1000px"></dc-import></div>
+  <main class="main">
+    <header class="top">
+      <div>
+        <h1>Overview</h1>
+        <p class="sub">Traffic through the gateway, all keys and backends</p>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center">
+        <div class="seg" role="group" aria-label="Time range">
+          <sc-for list="{{ranges}}" as="r" hint-placeholder-count="4">
+            <button type="button" class="{{r.cls}}" onClick="{{r.pick}}">{{r.label}}</button>
+          </sc-for>
+        </div>
+        <button type="button" class="btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"></path></svg>
+          Export
+        </button>
+      </div>
+    </header>
+
+    <div class="content">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px">
+        <div class="card kpi">
+          <div class="lbl">Requests</div>
+          <div class="big">48,213</div>
+          <div class="muted" style="font-size: 13px"><span style="color: #15803D">+12%</span> vs. previous period</div>
+        </div>
+        <div class="card kpi">
+          <div class="lbl">Blocked</div>
+          <div class="big">312</div>
+          <div class="muted" style="font-size: 13px">0.65% of requests · 41 by scripts</div>
+        </div>
+        <div class="card kpi">
+          <div class="lbl">False alarms fixed</div>
+          <div class="big">640</div>
+          <div class="muted" style="font-size: 13px">PIGuard flagged, OSS check let through</div>
+        </div>
+        <div class="card kpi">
+          <div class="lbl">Gateway overhead p95</div>
+          <div class="big">38 ms</div>
+          <div class="muted" style="font-size: 13px">Judge adds 640 ms when escalated</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <section class="card" style="flex: 2 1 560px">
+          <div class="hd">
+            <div>
+              <h2>Requests per hour</h2>
+              <div class="muted" style="font-size: 13px">Peak 3,412 at 14:00</div>
+            </div>
+            <span class="pill info">All schemas</span>
+          </div>
+          <div style="display: flex; align-items: flex-end; gap: 4px; height: 190px; border-bottom: 1px solid #E6E8EE">
+            <sc-for list="{{reqBars}}" as="b" hint-placeholder-count="24">
+              <div class="bar" title="{{b.tip}}" style="height: {{b.h}}px; background: #3A1FD1"></div>
+            </sc-for>
+          </div>
+          <div class="mono muted" style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 11.5px">
+            <span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>23:00</span>
+          </div>
+        </section>
+
+        <section class="card" style="flex: 1 1 320px">
+          <div class="hd">
+            <div>
+              <h2>Blocked per hour</h2>
+              <div class="muted" style="font-size: 13px">Guard, rules and scripts combined</div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: flex-end; gap: 3px; height: 190px; border-bottom: 1px solid #E6E8EE">
+            <sc-for list="{{blkBars}}" as="b" hint-placeholder-count="24">
+              <div class="bar" title="{{b.tip}}" style="height: {{b.h}}px; background: #E5484D"></div>
+            </sc-for>
+          </div>
+          <div class="mono muted" style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 11.5px">
+            <span>00:00</span><span>12:00</span><span>23:00</span>
+          </div>
+        </section>
+      </div>
+
+      <div class="row">
+        <section class="card" style="flex: 2 1 560px">
+          <div class="hd">
+            <h2>Recent blocks</h2>
+            <a href="Logs.dc.html" style="font-size: 13px">Open access log</a>
+          </div>
+          <div class="scroll">
+            <table class="tbl">
+              <thead><tr><th>Time</th><th>Identity</th><th>Reason</th><th>Stage</th><th>Result</th></tr></thead>
+              <tbody>
+                <tr><td class="mono">17:28:04</td><td>rafi <span class="mono muted">grk_live_7Hq…</span></td><td>Instruction hidden in a tool result</td><td>Judge · 0.97</td><td><span class="pill bad">Blocked</span></td></tr>
+                <tr><td class="mono">17:21:40</td><td>ci-runner <span class="mono muted">grk_live_c2M…</span></td><td>.env contents in prompt</td><td>Rule · secrets-redact</td><td><span class="pill warn">Redacted</span></td></tr>
+                <tr><td class="mono">17:09:12</td><td>platform-team <span class="mono muted">grk_live_Pt9…</span></td><td>Destructive shell command</td><td>Script · block-rm-rf</td><td><span class="pill bad">Blocked</span></td></tr>
+                <tr><td class="mono">16:55:31</td><td class="muted">no key · 10.4.2.19</td><td>Source IP not in allowlist</td><td>Auth</td><td><span class="pill bad">401</span></td></tr>
+                <tr><td class="mono">16:40:02</td><td>rafi <span class="mono muted">grk_live_7Hq…</span></td><td>Strict schema: body looks like Anthropic Messages (0.92)</td><td>Schema</td><td><span class="pill bad">422</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <div style="flex: 1 1 320px; display: flex; flex-direction: column; gap: 20px; min-width: 0">
+          <section class="card">
+            <div class="hd"><h2>Stage latency, p50</h2></div>
+            <div style="display: flex; flex-direction: column; gap: 12px">
+              <sc-for list="{{stages}}" as="s" hint-placeholder-count="6">
+                <div title="{{s.name}}: {{s.v}}">
+                  <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px"><span>{{s.name}}</span><span class="mono muted">{{s.v}}</span></div>
+                  <div style="height: 6px; background: #EEF0F4; border-radius: 4px"><div style="height: 6px; width: {{s.w}}%; background: #3A1FD1; border-radius: 4px"></div></div>
+                </div>
+              </sc-for>
+            </div>
+          </section>
+          <section class="card">
+            <div class="hd"><h2>Backends</h2><a href="Backends.dc.html" style="font-size: 13px">Manage</a></div>
+            <div style="display: flex; flex-direction: column; gap: 10px; font-size: 13px">
+              <div style="display: flex; justify-content: space-between; gap: 8px"><span>spark-01 <span class="mono muted">10.0.0.21:8000</span></span><span class="pill ok">Healthy · 42 ms</span></div>
+              <div style="display: flex; justify-content: space-between; gap: 8px"><span>spark-02 <span class="mono muted">10.0.0.22:8000</span></span><span class="pill ok">Healthy · 45 ms</span></div>
+              <div style="display: flex; justify-content: space-between; gap: 8px"><span>guard-node <span class="mono muted">10.0.0.30:8001</span></span><span class="pill ok">Healthy · 9 ms</span></div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </main>
+  </div>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1120}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { range: '24h' }; }
+  renderVals() {
+    const req = [820,640,510,430,410,520,900,1600,2600,3100,3300,3200,2900,3150,3412,3350,3000,2700,2100,1700,1400,1200,1050,930];
+    const blk = [4,3,2,2,1,3,6,11,17,21,24,22,19,20,25,23,20,17,13,10,8,6,5,4];
+    const hh = (i) => String(i).padStart(2, '0') + ':00';
+    const reqBars = req.map((v, i) => ({ h: Math.round(v / 3412 * 180), tip: hh(i) + ' · ' + v.toLocaleString() + ' requests' }));
+    const blkBars = blk.map((v, i) => ({ h: Math.round(v / 25 * 180), tip: hh(i) + ' · ' + v + ' blocked' }));
+    const stages = [
+      { name: 'Auth and source check', v: '0.4 ms', w: 3 },
+      { name: 'Schema detection', v: '0.9 ms', w: 6 },
+      { name: 'PIGuard (every request)', v: '11 ms', w: 70 },
+      { name: 'Rules and scripts', v: '2.3 ms', w: 15 },
+      { name: 'Prompt and tool injection', v: '0.3 ms', w: 2 },
+      { name: 'Schema translation', v: '0.6 ms', w: 4 }
+    ];
+    const range = this.state.range;
+    const ranges = ['1h', '24h', '7d', '30d'].map((r) => ({ label: r, cls: r === range ? 'on' : '', pick: () => this.setState({ range: r }) }));
+    return { reqBars, blkBars, stages, ranges };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>GuardRail AI · Rules</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E4E7EE}
+a{color:#3A1FD1}a:hover{color:#2A139E}
+.gr{font-family:'Plus Jakarta Sans',ui-sans-serif,system-ui,sans-serif;color:#14151A;background:#E4E7EE;min-height:100vh;padding:24px;font-size:14px;line-height:1.45}
+.gr *{box-sizing:border-box}
+.app{background:#F7F8FA;border:6px solid #FFFFFF;border-radius:28px;box-shadow:0 12px 40px rgba(30,35,60,.10);overflow:hidden;min-height:calc(100vh - 48px)}
+.shell{display:flex;flex-wrap:wrap}
+.side{flex:1 1 220px;max-width:100%;padding:4px 12px 24px}
+.main{flex:999 1 560px;min-width:0;display:flex;flex-direction:column;padding:4px 24px 40px 8px}
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;padding:22px 24px 14px;background:#ECEEF3;border-radius:18px}
+.top h1{margin:0;font-size:22px;font-weight:700;letter-spacing:-0.01em}
+.content{padding:20px 0 0;display:flex;flex-direction:column;gap:16px}
+.card{background:#FFFFFF;border:1px solid #E6E8EE;border-radius:16px;padding:20px;min-width:0;box-shadow:0 1px 2px rgba(20,21,26,.04)}
+.card h2{margin:0;font-size:15px;font-weight:700}
+.hd{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+.btn{font:inherit;font-weight:600;font-size:13px;border-radius:10px;padding:0 14px;min-height:40px;border:1px solid #E1E4EB;background:#FFFFFF;color:#14151A;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none}
+.btn:hover{border-color:#C9CDD8;color:#14151A}
+.btn.pri{background:#3A1FD1;border-color:#3A1FD1;color:#FFFFFF}
+.btn.blk{background:#111214;border-color:#111214;color:#FFFFFF}
+.btn.sm{min-height:32px;padding:0 10px;font-size:12.5px}
+.btn.dash{border-style:dashed;color:#3A1FD1;border-color:#B7ACF2}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:#F0F1F5;color:#4A4F5E;white-space:nowrap}
+.ok{background:#E3F7EA;color:#15803D}
+.warn{background:#FEF1DC;color:#A15C07}
+.info{background:#ECE9FF;color:#3A1FD1}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px}
+.muted{color:#6B7080}
+.lbl{display:block;font-size:12px;color:#6B7080;font-weight:600;margin-bottom:6px}
+.inp{font:inherit;font-size:13px;background:#FFFFFF;border:1px solid #E1E4EB;border-radius:10px;color:#14151A;padding:0 12px;min-height:40px;width:100%}
+.tabs{display:flex;flex-wrap:wrap;gap:22px;margin-top:14px}
+.tabs button{font:inherit;font-size:13px;font-weight:600;border:0;background:transparent;color:#4A4F5E;padding:6px 0;cursor:pointer;border-bottom:2px solid transparent}
+.tabs button.on{color:#3A1FD1;border-bottom-color:#3A1FD1}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{font:inherit;font-size:12.5px;font-weight:600;border:1px solid #E1E4EB;background:#FFFFFF;color:#14151A;padding:0 14px;min-height:34px;border-radius:9px;cursor:pointer}
+.chips button.on{background:#111214;border-color:#111214;color:#FFFFFF}
+.item{font:inherit;text-align:left;width:100%;display:flex;flex-direction:column;gap:6px;background:#FFFFFF;border:1px solid #E6E8EE;border-radius:14px;padding:14px 16px;cursor:pointer;color:#14151A}
+.item.on{border-color:#3A1FD1;box-shadow:0 0 0 1px #3A1FD1}
+.cond{display:grid;grid-template-columns:minmax(120px,1fr) minmax(120px,1fr) minmax(160px,2fr) 36px;gap:8px;align-items:center}
+.box{background:#F7F8FA;border:1px solid #E6E8EE;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.x{width:36px;height:36px;border-radius:9px;border:1px solid #E1E4EB;background:#FFFFFF;color:#6B7080;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.kw{font-size:11px;font-weight:700;letter-spacing:.08em;color:#3A1FD1}
+</style>
+</helmet>
+<div class="gr"><div class="app">
+  <dc-import name="Topbar" hint-size="100%,80px"></dc-import>
+  <div class="shell">
+  <div class="side"><dc-import name="Sidebar" active="rules" hint-size="100%,1000px"></dc-import></div>
+  <main class="main">
+    <header class="top">
+      <div>
+        <h1>Rules</h1>
+        <div class="tabs" role="tablist" aria-label="Rule status">
+          <button type="button" role="tab" class="on">Enforced (6)</button>
+          <button type="button" role="tab">Shadow (2)</button>
+          <button type="button" role="tab">Off (1)</button>
+          <button type="button" role="tab">Templates (12)</button>
+        </div>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding-bottom: 8px">
+        <input class="inp" style="width: 240px" type="search" placeholder="Search rules" aria-label="Search rules">
+        <button type="button" class="btn pri">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+          New rule
+        </button>
+      </div>
+    </header>
+
+    <div class="content">
+      <div style="display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between">
+        <div class="chips" role="group" aria-label="Where it runs">
+          <button type="button" class="on">All</button><button type="button">Request</button><button type="button">Response</button><button type="button">Tool calls</button><button type="button">Logging</button>
+        </div>
+        <div class="chips" role="group" aria-label="Action">
+          <button type="button" class="on">Any action</button><button type="button">Block</button><button type="button">Redact</button><button type="button">Route</button><button type="button">Alert</button>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+        <div style="flex: 1 1 300px; display: flex; flex-direction: column; gap: 10px; min-width: 0">
+          <sc-for list="{{rules}}" as="r" hint-placeholder-count="5">
+            <button type="button" class="{{r.cls}}" onClick="{{r.pick}}">
+              <span style="display: flex; justify-content: space-between; gap: 8px; align-items: center; width: 100%"><b style="font-size: 14px">{{r.name}}</b><span class="{{r.scls}}">{{r.status}}</span></span>
+              <span class="muted" style="font-size: 12.5px">{{r.desc}}</span>
+              <span style="display: flex; gap: 14px; font-size: 12px; color: #4A4F5E"><span class="mono" style="color: #3A1FD1">{{r.hook}}</span><span>{{r.hits}}</span></span>
+            </button>
+          </sc-for>
+        </div>
+
+        <section class="card" style="flex: 2 1 560px; display: flex; flex-direction: column; gap: 18px">
+          <div class="hd" style="margin: 0">
+            <div>
+              <div class="lbl" style="margin-bottom: 2px">Editing rule</div>
+              <h2 style="font-size: 18px">{{s.name}}</h2>
+            </div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap">
+              <button type="button" class="btn">Test on last 24 hours</button>
+              <button type="button" class="btn blk">Save rule</button>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px">
+            <label><span class="lbl">Runs at</span><select class="inp mono"><option>{{s.hook}}</option><option>on_receive</option><option>after_auth</option><option>after_guard</option><option>before_forward</option><option>on_tool_call</option><option>on_response</option><option>before_log</option></select></label>
+            <label><span class="lbl">Applies to</span><input class="inp" type="text" value="{{s.scope}}"></label>
+          </div>
+
+          <div class="box">
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+              <span class="kw">WHEN</span>
+              <span style="font-size: 13px">match</span>
+              <select class="inp" style="width: auto; min-height: 32px"><option>all</option><option>any</option></select>
+              <span style="font-size: 13px">of these conditions</span>
+            </div>
+            <sc-for list="{{conds}}" as="c" hint-placeholder-count="3">
+              <div class="cond">
+                <select class="inp" aria-label="Field"><option>{{c.f}}</option></select>
+                <select class="inp" aria-label="Operator"><option>{{c.o}}</option></select>
+                <input class="inp mono" type="text" value="{{c.v}}" aria-label="Value">
+                <button type="button" class="x" aria-label="Remove condition"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+              </div>
+            </sc-for>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap">
+              <button type="button" class="btn sm dash" onClick="{{addCond}}">+ Add condition</button>
+              <button type="button" class="btn sm dash">+ Add OR group</button>
+            </div>
+          </div>
+
+          <div class="box">
+            <span class="kw">THEN</span>
+            <sc-for list="{{s.actions}}" as="a" hint-placeholder-count="2">
+              <div style="display: grid; grid-template-columns: minmax(140px, 1fr) minmax(200px, 2fr) 36px; gap: 8px; align-items: center">
+                <select class="inp" aria-label="Action"><option>{{a.a}}</option></select>
+                <input class="inp mono" type="text" value="{{a.v}}" aria-label="Action value">
+                <button type="button" class="x" aria-label="Remove action"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+              </div>
+            </sc-for>
+            <button type="button" class="btn sm dash" style="align-self: flex-start">+ Add action</button>
+          </div>
+
+          <div style="display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between; background: #ECE9FF; border-radius: 14px; padding: 14px 16px">
+            <div style="font-size: 13px"><b>If this rule had been on for the last 24 hours</b><div style="color: #3E3A66">{{s.impact}}</div></div>
+            <a href="Logs.dc.html" class="btn sm">See matches</a>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+  </div>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1120}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { sel: 0, extra: 0 }; }
+  renderVals() {
+    const rules = [
+      { name: 'secrets-redact', desc: 'Mask API keys, private keys and .env values before they reach the model', hook: 'after_schema', hits: '37 hits today', status: 'Enforced', scope: 'All keys',
+        conds: [['Message text', 'matches regex', '(AKIA[0-9A-Z]{16}|sk-[A-Za-z0-9]{32,}|-----BEGIN .* KEY-----)'], ['Content source', 'is any of', 'user message, tool result'], ['Team', 'is not', 'security']],
+        actions: [['Redact matches', '[REDACTED:secret]'], ['Send alert', 'webhook: #sec-alerts']], impact: 'Would match 37 requests from 12 keys. No false positives in the 20 sampled.' },
+      { name: 'team-quota', desc: 'Stop a team after 2M tokens a day', hook: 'after_auth', hits: '0 hits today', status: 'Shadow', scope: 'All teams',
+        conds: [['Team tokens today', 'greater than', '2000000']],
+        actions: [['Block', '429 daily token budget used']], impact: 'Would have blocked 0 requests. platform peaked at 1.4M tokens.' },
+      { name: 'deny-outside-repo', desc: 'Block tool calls that touch paths outside the project', hook: 'on_tool_call', hits: '5 hits today', status: 'Enforced', scope: 'All keys',
+        conds: [['Tool name', 'is any of', 'read_file, write_file, execute_command'], ['Tool argument path', 'not under', '${workspace}']],
+        actions: [['Block tool call', 'path outside workspace'], ['Annotate log', 'policy: workspace-only']], impact: 'Would match 5 tool calls, all reading ~/.ssh or ~/.aws.' },
+      { name: 'night-route-small', desc: 'Send CI traffic to the small model at night', hook: 'before_forward', hits: '212 hits today', status: 'Enforced', scope: 'key: ci-runner',
+        conds: [['Time of day', 'between', '22:00 and 06:00'], ['Key', 'is', 'ci-runner']],
+        actions: [['Route to model', 'qwen3-coder-30b']], impact: 'Would match 212 requests, all from ci-runner.' },
+      { name: 'redact-log-bodies', desc: 'Store hashes, never prompt text, in the access log', hook: 'before_log', hits: 'every request', status: 'Enforced', scope: 'All keys',
+        conds: [['Always', 'n/a', '']],
+        actions: [['Rewrite log field', 'prompt → sha256']], impact: 'Applies to every row. Bodies are already off by default.' }
+    ];
+    const sel = this.state.sel;
+    const sc = { Enforced: 'pill ok', Shadow: 'pill warn' };
+    const list = rules.map((r, i) => ({ ...r, cls: i === sel ? 'item on' : 'item', scls: sc[r.status] || 'pill', pick: () => this.setState({ sel: i, extra: 0 }) }));
+    const s0 = rules[sel];
+    const conds = s0.conds.map((c) => ({ f: c[0], o: c[1], v: c[2] }));
+    for (let k = 0; k < this.state.extra; k++) conds.push({ f: 'Choose a field', o: 'is', v: '' });
+    const s = { ...s0, actions: s0.actions.map((a) => ({ a: a[0], v: a[1] })) };
+    return { rules: list, s, conds, addCond: () => this.setState({ extra: this.state.extra + 1 }) };
+  }
+}
+</script>
+</body>
+</html>

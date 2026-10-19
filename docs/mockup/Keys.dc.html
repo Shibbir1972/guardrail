@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>GuardRail AI · API keys</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E4E7EE}
+a{color:#3A1FD1}a:hover{color:#2A139E}
+.gr{font-family:'Plus Jakarta Sans',ui-sans-serif,system-ui,sans-serif;color:#14151A;background:#E4E7EE;min-height:100vh;padding:24px;font-size:14px;line-height:1.45}
+.gr *{box-sizing:border-box}
+.app{background:#F7F8FA;border:6px solid #FFFFFF;border-radius:28px;box-shadow:0 12px 40px rgba(30,35,60,.10);overflow:hidden;min-height:calc(100vh - 48px)}
+.shell{display:flex;flex-wrap:wrap}
+.side{flex:1 1 220px;max-width:100%;padding:4px 12px 24px}
+.main{flex:999 1 560px;min-width:0;display:flex;flex-direction:column;padding:4px 24px 40px 8px}
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;padding:22px 24px;background:#ECEEF3;border-radius:18px}
+.top h1{margin:0;font-size:22px;font-weight:700;letter-spacing:-0.01em}
+.sub{margin:4px 0 0;color:#5F6475;font-size:13px}
+.step{font-size:12px;font-weight:700;color:#3A1FD1;text-transform:uppercase;letter-spacing:.06em}
+.content{padding:20px 0 0;display:flex;flex-direction:column;gap:20px}
+.card{background:#FFFFFF;border:1px solid #E6E8EE;border-radius:16px;padding:20px;min-width:0;box-shadow:0 1px 2px rgba(20,21,26,.04)}
+.card h2{margin:0;font-size:15px;font-weight:700}
+.hd{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+.btn{font:inherit;font-weight:600;font-size:13px;border-radius:10px;padding:0 14px;min-height:40px;border:1px solid #E1E4EB;background:#FFFFFF;color:#14151A;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none}
+.btn:hover{border-color:#C9CDD8;color:#14151A}
+.btn.pri{background:#3A1FD1;border-color:#3A1FD1;color:#FFFFFF}
+.btn.blk{background:#111214;border-color:#111214;color:#FFFFFF}
+.btn.sm{min-height:32px;padding:0 10px;font-size:12.5px}
+.btn.dash{border-style:dashed;color:#3A1FD1;border-color:#B7ACF2}
+.btn.danger{color:#B42318}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:#F0F1F5;color:#4A4F5E;white-space:nowrap}
+.ok{background:#E3F7EA;color:#15803D}
+.bad{background:#FDE8E8;color:#B42318}
+.warn{background:#FEF1DC;color:#A15C07}
+.info{background:#ECE9FF;color:#3A1FD1}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px}
+.muted{color:#6B7080}
+.lbl{display:block;font-size:12px;color:#6B7080;font-weight:600;margin-bottom:6px}
+.inp{font:inherit;font-size:13px;background:#FFFFFF;border:1px solid #E1E4EB;border-radius:10px;color:#14151A;padding:0 12px;min-height:44px;width:100%}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{text-align:left;font-weight:600;color:#6B7080;font-size:12px;padding:10px 12px;border-bottom:1px solid #ECEEF3;white-space:nowrap}
+.tbl td{padding:12px;border-bottom:1px solid #F0F1F5;vertical-align:middle;white-space:nowrap}
+.tbl tr:last-child td{border-bottom:0}
+.scroll{overflow-x:auto}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{font:inherit;font-size:13px;font-weight:600;border:1px solid #E1E4EB;background:#FFFFFF;color:#14151A;padding:0 14px;min-height:40px;border-radius:10px;cursor:pointer}
+.chips button.on{background:#111214;border-color:#111214;color:#FFFFFF}
+.num{width:26px;height:26px;border-radius:50%;background:#3A1FD1;color:#FFFFFF;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:none}
+.gets{display:grid;grid-template-columns:110px minmax(0,1fr);gap:8px 12px;font-size:13px}
+.gets dt{color:#6B7080}
+.gets dd{margin:0}
+.exc{display:flex;flex-wrap:wrap;align-items:center;gap:10px;border:1px solid #F1D7A6;background:#FFF8EC;border-radius:12px;padding:10px 12px;font-size:13px}
+</style>
+</helmet>
+<div class="gr"><div class="app">
+  <dc-import name="Topbar" hint-size="100%,80px"></dc-import>
+  <div class="shell">
+  <div class="side"><dc-import name="Sidebar" active="keys" hint-size="100%,1000px"></dc-import></div>
+  <main class="main">
+    <header class="top">
+      <div>
+        <div class="step">Step 3 of 5</div>
+        <h1>API keys</h1>
+        <p class="sub">Each key belongs to one person or bot and one group, so every request can be traced back to them.</p>
+      </div>
+      <a href="Context.dc.html" class="btn blk">Next: context files</a>
+    </header>
+
+    <div class="content">
+      <section class="card">
+        <div class="hd"><h2>Create a key</h2><span class="muted" style="font-size: 13px">Shown once. GuardRail stores only a hash.</span></div>
+        <div style="display: flex; flex-wrap: wrap; gap: 24px">
+          <div style="flex: 3 1 420px; display: flex; flex-direction: column; gap: 18px; min-width: 0">
+            <div style="display: flex; gap: 12px">
+              <span class="num">1</span>
+              <div style="flex: 1 1 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px">
+                <label><span class="lbl">Who is it for</span><input class="inp" type="text" value="rafi"></label>
+                <label><span class="lbl">Key name</span><input class="inp" type="text" value="rafi-laptop-cline"></label>
+              </div>
+            </div>
+            <div style="display: flex; gap: 12px">
+              <span class="num">2</span>
+              <div style="flex: 1 1 auto">
+                <span class="lbl">Group</span>
+                <div class="chips" role="group" aria-label="Group">
+                  <sc-for list="{{groups}}" as="g" hint-placeholder-count="5">
+                    <button type="button" class="{{g.cls}}" onClick="{{g.pick}}">{{g.label}}</button>
+                  </sc-for>
+                </div>
+                <div class="muted" style="font-size: 12px; margin-top: 6px">{{grp.path}}</div>
+              </div>
+            </div>
+            <div style="display: flex; gap: 12px">
+              <span class="num">3</span>
+              <div style="flex: 1 1 auto; display: flex; flex-direction: column; gap: 8px">
+                <span class="lbl" style="margin: 0">Exceptions for this key only (optional)</span>
+                <sc-if value="{{hasExc}}" hint-placeholder-val="{{ true }}">
+                  <div class="exc"><span class="pill warn">Adds</span><span style="flex: 1 1 auto">Context file <span class="mono">backend.md</span></span><button type="button" class="btn sm" onClick="{{dropExc}}">Remove</button></div>
+                </sc-if>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px">
+                  <button type="button" class="btn sm dash" onClick="{{addExc}}">+ Extra context file</button>
+                  <button type="button" class="btn sm dash">+ Extra model</button>
+                  <button type="button" class="btn sm dash">+ Different rate limit</button>
+                  <button type="button" class="btn sm dash">+ Expiry date</button>
+                </div>
+              </div>
+            </div>
+            <div style="display: flex; justify-content: flex-end"><button type="button" class="btn pri" onClick="{{generate}}">Create key</button></div>
+            <sc-if value="{{made}}" hint-placeholder-val="{{ false }}">
+              <div style="display: flex; flex-direction: column; gap: 10px; background: #F7F8FA; border-radius: 12px; padding: 14px">
+                <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center">
+                  <code class="mono" style="flex: 1 1 320px; background: #FFFFFF; border: 1px solid #E1E4EB; border-radius: 10px; padding: 12px 14px; font-size: 13.5px">grk_live_9xT2qLm4VbR7nK0sWf3ZpHc8Ue6YdA1j</code>
+                  <button type="button" class="btn">Copy</button>
+                </div>
+                <div class="muted" style="font-size: 12.5px">In Cline, pick OpenAI Compatible, set the base URL to <span class="mono" style="color: #14151A">https://guardrail.local/v1</span> and paste this key.</div>
+              </div>
+            </sc-if>
+          </div>
+
+          <div style="flex: 2 1 300px; background: #F3F1FF; border: 1px solid #DCD6FB; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+            <div><div class="lbl" style="margin: 0">This key will get</div><div style="font-size: 12.5px; color: #3E3A66">Everything from {{grp.label}} and its parent groups{{excNote}}</div></div>
+            <dl class="gets" style="margin: 0">
+              <dt>Servers</dt><dd>{{grp.servers}}</dd>
+              <dt>Models</dt><dd class="mono">{{grp.models}}</dd>
+              <dt>Context</dt><dd class="mono">{{ctx}}</dd>
+              <dt>First check</dt><dd>PIGuard, flags at {{grp.pig}}</dd>
+              <dt>Second check</dt><dd>gpt-oss-safeguard with {{grp.label}} prompt</dd>
+              <dt>Rate limit</dt><dd>{{grp.rate}}</dd>
+            </dl>
+            <a href="Groups.dc.html" style="font-size: 13px">See where each rule comes from</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" style="padding: 8px 8px 4px">
+        <div class="hd" style="padding: 12px 12px 0">
+          <h2>All keys</h2>
+          <input class="inp" style="width: 260px; min-height: 40px" type="search" placeholder="Search by person, key or group" aria-label="Search keys">
+        </div>
+        <div class="scroll">
+          <table class="tbl">
+            <thead><tr><th>Key</th><th>Person or bot</th><th>Group</th><th>Exceptions</th><th>Last used</th><th>Requests today</th><th>Status</th><th><span style="position: absolute; left: -9999px">Actions</span></th></tr></thead>
+            <tbody>
+              <sc-for list="{{keys}}" as="k" hint-placeholder-count="6">
+                <tr>
+                  <td><div style="font-weight: 600">{{k.name}}</div><div class="mono muted">{{k.prefix}}</div></td>
+                  <td>{{k.owner}}</td>
+                  <td><span class="pill info">{{k.group}}</span></td>
+                  <td class="muted">{{k.exc}}</td>
+                  <td class="muted">{{k.used}}</td>
+                  <td class="mono">{{k.req}}</td>
+                  <td><span class="{{k.pcls}}">{{k.status}}</span></td>
+                  <td><button type="button" class="btn sm danger" onClick="{{k.revoke}}">{{k.action}}</button></td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+  </div>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1120}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { g: 'Frontend', exc: true, made: false, revoked: {} }; }
+  renderVals() {
+    const G = {
+      Engineering: { path: 'Company › Engineering', servers: 'All servers', models: 'qwen3-coder-30b, qwen3-coder-480b-fp8, gpt-oss-120b', ctx: 'project-overview.md, security-policy.md', pig: '0.70', rate: '200 per min' },
+      Frontend: { path: 'Company › Engineering › Frontend', servers: 'All servers', models: 'qwen3-coder-30b, qwen3-coder-480b-fp8, gpt-oss-120b', ctx: 'project-overview.md, security-policy.md, frontend.md', pig: '0.60', rate: '200 per min' },
+      Backend: { path: 'Company › Engineering › Backend', servers: 'All servers', models: 'qwen3-coder-30b, qwen3-coder-480b-fp8, gpt-oss-120b', ctx: 'project-overview.md, security-policy.md, backend.md', pig: '0.70', rate: '200 per min' },
+      QA: { path: 'Company › QA', servers: 'All servers', models: 'qwen3-coder-30b', ctx: 'project-overview.md, security-policy.md, qa.md', pig: '0.70', rate: '120 per min' },
+      'CI bots': { path: 'Company › CI bots', servers: 'spark-02 only', models: 'qwen3-coder-30b', ctx: 'project-overview.md, security-policy.md', pig: '0.70', rate: '600 per min' }
+    };
+    const g = this.state.g;
+    const groups = Object.keys(G).map((k) => ({ label: k, cls: k === g ? 'on' : '', pick: () => this.setState({ g: k }) }));
+    const grp = { ...G[g], label: g };
+    const ctx = grp.ctx + (this.state.exc ? ', backend.md (exception)' : '');
+    const base = [
+      { name: 'rafi-laptop-cline', owner: 'rafi', group: 'Frontend', exc: '+ backend.md', used: '2 min ago', req: '412' },
+      { name: 'rafi-claude-code', owner: 'rafi', group: 'Backend', exc: 'None', used: '14 min ago', req: '288' },
+      { name: 'ui-team', owner: 'web squad', group: 'Frontend', exc: 'None', used: '1 hour ago', req: '1,904' },
+      { name: 'platform-team', owner: 'platform', group: 'Backend', exc: 'Rate 400 per min', used: '19 min ago', req: '3,210' },
+      { name: 'qa-runner', owner: 'qa team', group: 'QA', exc: 'None', used: '3 hours ago', req: '96' },
+      { name: 'ci-runner', owner: 'platform', group: 'CI bots', exc: 'None', used: '7 min ago', req: '8,750' }
+    ];
+    const keys = base.map((k, i) => {
+      const rev = !!this.state.revoked[i];
+      return { ...k, prefix: 'grk_live_' + k.name.slice(0, 3) + '…', status: rev ? 'Revoked' : 'Active', pcls: rev ? 'pill bad' : 'pill ok', action: rev ? 'Restore' : 'Revoke',
+        revoke: () => this.setState({ revoked: { ...this.state.revoked, [i]: !rev } }) };
+    });
+    return {
+      groups, grp, ctx, keys,
+      hasExc: this.state.exc, made: this.state.made,
+      excNote: this.state.exc ? ', plus one exception.' : '.',
+      addExc: () => this.setState({ exc: true }), dropExc: () => this.setState({ exc: false }),
+      generate: () => this.setState({ made: true })
+    };
+  }
+}
+</script>
+</body>
+</html>

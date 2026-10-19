@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>GuardRail AI · Schema registry and policy</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E4E7EE}
+a{color:#3A1FD1}a:hover{color:#2A139E}
+.gr{font-family:'Plus Jakarta Sans',ui-sans-serif,system-ui,sans-serif;color:#14151A;background:#E4E7EE;min-height:100vh;padding:24px;font-size:14px;line-height:1.45}
+.gr *{box-sizing:border-box}
+.app{background:#F7F8FA;border:6px solid #FFFFFF;border-radius:28px;box-shadow:0 12px 40px rgba(30,35,60,.10);overflow:hidden;min-height:calc(100vh - 48px)}
+.shell{display:flex;flex-wrap:wrap}
+.side{flex:1 1 220px;max-width:100%;padding:4px 12px 24px}
+.main{flex:999 1 560px;min-width:0;display:flex;flex-direction:column;padding:4px 24px 40px 8px}
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;padding:22px 24px;background:#ECEEF3;border-radius:18px}
+.top h1{margin:0;font-size:22px;font-weight:700;letter-spacing:-0.01em}
+.sub{margin:4px 0 0;color:#5F6475;font-size:13px}
+.content{padding:20px 0 0;display:flex;flex-direction:column;gap:20px}
+.row{display:flex;flex-wrap:wrap;gap:20px}
+.card{background:#FFFFFF;border:1px solid #E6E8EE;border-radius:16px;padding:20px;min-width:0;box-shadow:0 1px 2px rgba(20,21,26,.04)}
+.card h2{margin:0;font-size:15px;font-weight:700}
+.hd{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+.btn{font:inherit;font-weight:600;font-size:13px;border-radius:10px;padding:0 14px;min-height:40px;border:1px solid #E1E4EB;background:#FFFFFF;color:#14151A;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none}
+.btn:hover{border-color:#C9CDD8;color:#14151A}
+.btn.pri{background:#3A1FD1;border-color:#3A1FD1;color:#FFFFFF}
+.btn.blk{background:#111214;border-color:#111214;color:#FFFFFF}
+.btn.sm{min-height:32px;padding:0 10px;font-size:12.5px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:#F0F1F5;color:#4A4F5E;white-space:nowrap}
+.ok{background:#E3F7EA;color:#15803D}
+.bad{background:#FDE8E8;color:#B42318}
+.warn{background:#FEF1DC;color:#A15C07}
+.info{background:#ECE9FF;color:#3A1FD1}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px}
+.muted{color:#6B7080}
+.lbl{display:block;font-size:12px;color:#6B7080;font-weight:500;margin-bottom:6px}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{text-align:left;font-weight:500;color:#6B7080;font-size:12px;padding:10px 12px;border-bottom:1px solid #E6E8EE;white-space:nowrap}
+.tbl td{padding:12px;border-bottom:1px solid #F0F1F5;vertical-align:middle}
+.tbl tr:last-child td{border-bottom:0}
+.scroll{overflow-x:auto}
+.mode{font:inherit;text-align:left;flex:1 1 240px;padding:16px;border-radius:10px;border:1px solid #E1E4EB;background:#F7F8FA;color:#14151A;cursor:pointer;display:flex;flex-direction:column;gap:4px}
+.mode.on{border-color:#3A1FD1;background:#F3F1FF;box-shadow:inset 0 0 0 1px #3A1FD1}
+.sw{width:40px;height:24px;border-radius:999px;border:0;padding:3px;cursor:pointer;display:inline-flex;align-items:center;background:#D3D6DE}
+.sw.on{background:#3A1FD1;justify-content:flex-end}
+.sw span{width:18px;height:18px;border-radius:50%;background:#FFFFFF;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+pre{margin:0}
+</style>
+</helmet>
+<div class="gr"><div class="app">
+  <dc-import name="Topbar" hint-size="100%,80px"></dc-import>
+  <div class="shell">
+  <div class="side"><dc-import name="Sidebar" active="schemas" hint-size="100%,1000px"></dc-import></div>
+  <main class="main">
+    <header class="top">
+      <div>
+        <h1>Schemas</h1>
+        <p class="sub">Known API formats, how each request is detected, and which formats are accepted.</p>
+      </div>
+      <div style="display: flex; gap: 10px; flex-wrap: wrap">
+        <button type="button" class="btn">Add custom schema</button>
+        <button type="button" class="btn pri">Save policy</button>
+      </div>
+    </header>
+
+    <div class="content">
+      <section class="card">
+        <div class="hd">
+          <div>
+            <h2>Schema policy</h2>
+            <div class="muted" style="font-size: 13px">Global default. Keys and routes can override it below.</div>
+          </div>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 12px">
+          <button type="button" class="{{strictCls}}" onClick="{{setStrict}}" aria-pressed="{{isStrict}}">
+            <span style="font-weight: 600">Strict</span>
+            <span class="muted" style="font-size: 13px">Only the configured schema is accepted. Anything else is rejected with a suggestion of what it looks like.</span>
+          </button>
+          <button type="button" class="{{anyCls}}" onClick="{{setAny}}" aria-pressed="{{isAny}}">
+            <span style="font-weight: 600">Accept any known</span>
+            <span class="muted" style="font-size: 13px">Any enabled schema is accepted, detected and translated to what the vLLM backend speaks.</span>
+          </button>
+        </div>
+        <sc-if value="{{isStrict}}" hint-placeholder-val="{{ true }}">
+          <div style="display: flex; flex-wrap: wrap; gap: 16px; margin-top: 16px; align-items: flex-end">
+            <label style="flex: 0 1 320px"><span class="lbl">Expected schema</span>
+              <select class="btn" style="width: 100%">
+                <option>OpenAI Chat Completions</option>
+                <option>Anthropic Messages</option>
+                <option>OpenAI Responses</option>
+              </select>
+            </label>
+            <span class="muted" style="font-size: 13px; padding-bottom: 10px">Rejected requests return 422 with the best matching schema in the error.</span>
+          </div>
+        </sc-if>
+
+        <div style="margin-top: 22px">
+          <div class="lbl">Overrides</div>
+          <div class="scroll">
+            <table class="tbl">
+              <thead><tr><th>Scope</th><th>Applies to</th><th>Mode</th><th>Schemas</th><th><span style="position: absolute; left: -9999px">Actions</span></th></tr></thead>
+              <tbody>
+                <tr><td><span class="pill">API key</span></td><td class="mono">rafi-claude-code</td><td>Strict</td><td>Anthropic Messages</td><td><button type="button" class="btn sm">Edit</button></td></tr>
+                <tr><td><span class="pill">API key</span></td><td class="mono">ci-runner</td><td>Strict</td><td>OpenAI Chat Completions</td><td><button type="button" class="btn sm">Edit</button></td></tr>
+                <tr><td><span class="pill">Route</span></td><td class="mono">/v1/messages</td><td>Accept any known</td><td>All enabled</td><td><button type="button" class="btn sm">Edit</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <div class="row">
+        <section class="card" style="flex: 3 1 600px; padding: 8px 8px 4px">
+          <div class="hd" style="padding: 12px 12px 0">
+            <h2>Registry</h2>
+            <span class="muted" style="font-size: 13px">Share of traffic, last 24 hours</span>
+          </div>
+          <div class="scroll">
+            <table class="tbl">
+              <thead><tr><th>Schema</th><th>Signals</th><th>To backend</th><th>Share</th><th>Enabled</th></tr></thead>
+              <tbody>
+                <sc-for list="{{schemas}}" as="s" hint-placeholder-count="6">
+                  <tr>
+                    <td><div style="font-weight: 500">{{s.name}}</div><div class="mono muted">{{s.path}}</div></td>
+                    <td class="mono muted" style="font-size: 12px">{{s.signals}}</td>
+                    <td><span class="{{s.tcls}}">{{s.to}}</span></td>
+                    <td class="mono">{{s.share}}</td>
+                    <td><button type="button" class="{{s.swcls}}" onClick="{{s.toggle}}" role="switch" aria-checked="{{s.on}}" aria-label="Enable {{s.name}}"><span></span></button></td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card" style="flex: 2 1 420px; display: flex; flex-direction: column; gap: 14px">
+          <div class="hd" style="margin: 0">
+            <div>
+              <h2>Detection tester</h2>
+              <div class="muted" style="font-size: 13px">Paste a request to see how it scores.</div>
+            </div>
+            <button type="button" class="btn sm">Load from log</button>
+          </div>
+          <pre class="mono" style="background: #F7F8FA; border: 1px solid #E1E4EB; border-radius: 8px; padding: 14px; font-size: 12px; line-height: 1.6; color: #4A4F5E; overflow-x: auto">POST /v1/chat/completions
+anthropic-version: 2023-06-01
+x-api-key: grk_live_7Hq…a91
+
+{ "model": "qwen3-coder-30b",
+  "max_tokens": 4096,
+  "system": "You are a coding agent…",
+  "messages": [{ "role": "user",
+    "content": [{ "type": "text", "text": "…" }] }] }</pre>
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <sc-for list="{{scores}}" as="x" hint-placeholder-count="5">
+              <div style="display: grid; grid-template-columns: 150px minmax(0, 1fr) 40px; gap: 10px; align-items: center; font-size: 13px">
+                <span>{{x.n}}</span>
+                <div style="height: 8px; background: #EEF0F4; border-radius: 4px"><div style="height: 8px; width: {{x.w}}%; background: {{x.c}}; border-radius: 4px"></div></div>
+                <span class="mono" style="text-align: right">{{x.v}}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="{{verdictStyle}}">
+            <div style="font-weight: 600; margin-bottom: 4px">{{verdictTitle}}</div>
+            <div class="mono" style="font-size: 12px; color: #4A4F5E">{{verdictBody}}</div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+  </div>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1120}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { mode: 'strict', off: { 5: true } }; }
+  renderVals() {
+    const strict = this.state.mode === 'strict';
+    const list = [
+      { name: 'OpenAI Chat Completions', path: '/v1/chat/completions', signals: 'Bearer · messages[] · string content', to: 'Native', share: '71.4%' },
+      { name: 'Anthropic Messages', path: '/v1/messages', signals: 'anthropic-version · x-api-key · max_tokens required', to: 'Translated', share: '26.2%' },
+      { name: 'OpenAI Responses', path: '/v1/responses', signals: 'input[] · previous_response_id', to: 'Native', share: '1.6%' },
+      { name: 'OpenAI legacy Completions', path: '/v1/completions', signals: 'prompt string · no messages', to: 'Native', share: '0.5%' },
+      { name: 'Ollama', path: '/api/chat · /api/generate', signals: 'options{} · stream default true', to: 'Translated', share: '0.3%' },
+      { name: 'Google Gemini', path: ':generateContent', signals: 'contents[].parts · x-goog-api-key', to: 'Translated', share: '0%' }
+    ];
+    const schemas = list.map((s, i) => {
+      const on = !this.state.off[i];
+      return { ...s, on: on ? 'true' : 'false', swcls: on ? 'sw on' : 'sw', tcls: s.to === 'Native' ? 'pill ok' : 'pill info',
+        toggle: () => this.setState({ off: { ...this.state.off, [i]: on } }) };
+    });
+    const scores = [
+      { n: 'Anthropic Messages', v: '0.92', w: 92, c: '#3A1FD1' },
+      { n: 'OpenAI Chat', v: '0.31', w: 31, c: '#C9CDD8' },
+      { n: 'OpenAI Responses', v: '0.12', w: 12, c: '#C9CDD8' },
+      { n: 'Ollama', v: '0.05', w: 5, c: '#C9CDD8' },
+      { n: 'Google Gemini', v: '0.01', w: 1, c: '#C9CDD8' }
+    ];
+    const box = 'border-radius: 10px; padding: 14px; font-size: 13px; ';
+    return {
+      schemas, scores,
+      isStrict: strict, isAny: !strict,
+      strictCls: strict ? 'mode on' : 'mode', anyCls: strict ? 'mode' : 'mode on',
+      setStrict: () => this.setState({ mode: 'strict' }), setAny: () => this.setState({ mode: 'any' }),
+      verdictStyle: box + (strict ? 'background: rgba(248,113,113,.10); border: 1px solid rgba(248,113,113,.35); color: #B42318' : 'background: rgba(74,222,128,.08); border: 1px solid rgba(74,222,128,.3); color: #15803D'),
+      verdictTitle: strict ? 'Rejected · 422 schema mismatch' : 'Accepted as Anthropic Messages',
+      verdictBody: strict ? 'expected OpenAI Chat Completions; body matches Anthropic Messages (0.92)' : 'translated to OpenAI Chat Completions for vLLM; detection logged with confidence 0.92'
+    };
+  }
+}
+</script>
+</body>
+</html>
