@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Icon, Loading, PageHead, api, clock, fmt, ms, useAction, useApi } from '@/components/ui';
+import { Timeline } from '@/components/timeline';
 import type { LogEntry } from '@/lib/logs';
 
 interface Logs {
@@ -214,25 +215,7 @@ function Detail({ d, onFeedback }: { d: LogEntry; onFeedback: () => void }) {
         </div>
         <span className={`pill ${cls}`}>{label}</span>
       </div>
-      <div className="tl">
-        {d.steps.map((s, i) => (
-          <div className="ti" key={i}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <span className={`dot ${s.tone}`}>{i + 1}</span>
-              {i < d.steps.length - 1 && <span className="tline" />}
-            </div>
-            <div className="tbody">
-              <div className="between" style={{ alignItems: 'flex-start', flexWrap: 'nowrap' }}>
-                <b>{s.head}</b>
-                <span className="mono muted">{ms(s.ms)}</span>
-              </div>
-              <div className="muted">{s.text}</div>
-              {s.quote && <div className="quote">{s.quote}</div>}
-              {s.why && <div className="why">{s.why}</div>}
-            </div>
-          </div>
-        ))}
-      </div>
+      <Timeline steps={d.steps} />
       <div className="muted small">
         {[d.schema && `Schema ${d.schema}`, d.server && `Server ${d.server}`, d.latency_ms !== null && `Total ${ms(d.latency_ms)}`, d.tokens_out && `${fmt(d.tokens_out)} tokens out`].filter(Boolean).join(' · ')}
       </div>

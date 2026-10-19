@@ -53,6 +53,8 @@ Everything is under `/api/admin/` and returns JSON. Failures come back as `{"err
 | GET / PATCH | `logs/:id` | One entry, or `{feedback}` to mark a false alarm |
 | GET / POST | `rules` | Custom rules |
 | PATCH / DELETE | `rules/:id` | |
+| GET | `studio` | Keys (with the models each may use) and schemas for the Studio page |
+| POST | `studio/send` | `{keyId or secret, path, headers?, body}` sends a request through the real gateway. Returns the reply, the log entry with its steps, the context files added, and the body forwarded to the model |
 | GET | `schemas` | Known schemas and the current policy |
 | POST | `schemas/detect` | `{body, path, headers?}` returns the detection scores |
 | GET | `summary` | Sidebar counts |

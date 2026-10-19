@@ -193,6 +193,7 @@ const PATHS: Record<string, ReactNode> = {
     </>
   ),
   arrow: <path d="M5 12h14M13 6l6 6-6 6" />,
+  send: <path d="M22 2 11 13M22 2l-7 20-4-9-9-4z" />,
   chevron: <path d="m9 6 6 6-6 6" />,
   down: <path d="m6 9 6 6 6-6" />,
   x: <path d="M18 6 6 18M6 6l12 12" />,

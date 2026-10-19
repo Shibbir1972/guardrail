@@ -8,6 +8,7 @@ import { createRule, deleteRule, listRules, updateRule } from './rules';
 import { SCHEMAS, detectSchema } from './schemas';
 import { createServer, deleteServer, discover, errMsg, listModels, listServers, rediscover, refreshStale, setModelEnabled, updateServer } from './servers';
 import { getSettings, updateSettings } from './settings';
+import { allowedRoutes, handleCompletion, Trace } from './gateway';
 
 export class HttpError extends Error {
   constructor(public status: number, message: string) {
@@ -246,6 +247,74 @@ const routes: Record<string, Handler> = {
   'POST rules': ({ body }) => createRule(body as never),
   'PATCH rules/:id': ({ params, body }) => updateRule(num(params[0]), body as never),
   'DELETE rules/:id': ({ params }) => deleteRule(num(params[0])),
+
+  // ---- studio ----
+  'GET studio': () => {
+    const groups = listGroups();
+    return {
+      keys: listKeys().map((k) => ({
+        id: k.id,
+        name: k.name,
+        owner: k.owner,
+        prefix: k.prefix,
+        group: groupPath(k.groupId, groups),
+        revoked: k.revoked,
+        models: [...allowedRoutes(k, resolveGroup(k.groupId, k.exceptions, groups).effective).byModel.keys()].sort(),
+      })),
+      schemas: SCHEMAS,
+    };
+  },
+  'POST studio/send': async ({ body }) => {
+    const path = body.path === '/v1/completions' ? '/v1/completions' : '/v1/chat/completions';
+    const headers = new Headers({ 'content-type': 'application/json' });
+    for (const [k, v] of Object.entries((body.headers as Record<string, string>) ?? {})) {
+      try {
+        headers.set(k, String(v));
+      } catch {
+        // ignore bad header names
+      }
+    }
+    let key;
+    if (body.keyId) {
+      key = getKey(num(body.keyId, 'key'));
+      if (!key) throw new HttpError(404, 'Key not found.');
+    } else if (typeof body.secret === 'string' && body.secret.trim()) headers.set('authorization', `Bearer ${body.secret.trim()}`);
+    const payload = typeof body.body === 'string' ? body.body : JSON.stringify(body.body ?? {});
+    const trace: Trace = {};
+    const t0 = Date.now();
+    const res = await handleCompletion(new Request(`http://studio${path}`, { method: 'POST', headers, body: payload }), path === '/v1/completions' ? 'completions' : 'chat', { key, trace, source: 'Studio' });
+    const raw = await res.text();
+    const ms = Date.now() - t0;
+    const sse = (res.headers.get('content-type') ?? '').includes('event-stream');
+    let text = '';
+    let error: string | null = null;
+    try {
+      if (sse) {
+        for (const line of raw.split('\n')) {
+          if (!line.startsWith('data:') || line.includes('[DONE]')) continue;
+          const c = JSON.parse(line.slice(5)).choices?.[0];
+          text += c?.delta?.content ?? c?.text ?? '';
+        }
+      } else {
+        const j = JSON.parse(raw);
+        if (j.error) error = j.error.message ?? String(j.error);
+        else text = j.choices?.[0]?.message?.content ?? j.choices?.[0]?.text ?? '';
+      }
+    } catch {
+      text = raw;
+    }
+    return {
+      status: res.status,
+      ms,
+      streamed: sse,
+      blocked: res.headers.get('x-guardrail-blocked') === '1',
+      text,
+      error,
+      raw: raw.length > 20000 ? raw.slice(0, 20000) + '\n…' : raw,
+      trace,
+      log: trace.requestId ? getLog(trace.requestId) ?? null : null,
+    };
+  },
 
   // ---- schemas ----
   'GET schemas': () => ({ schemas: SCHEMAS, policy: getSettings().schemaPolicy }),

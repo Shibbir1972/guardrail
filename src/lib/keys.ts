@@ -125,7 +125,11 @@ export function lookupKey(secret: string | null): KeyLookup {
   if (!secret) return { ok: false, reason: 'No API key was sent.' };
   const r = getDb().prepare('SELECT * FROM api_keys WHERE hash = ?').get(hashKey(secret)) as ApiKeyRow | undefined;
   if (!r) return { ok: false, reason: 'The API key is not valid.' };
-  const key = parse(r);
+  return checkKey(parse(r));
+}
+
+/** Whether a key may be used right now. */
+export function checkKey(key: ApiKey): KeyLookup {
   if (key.revoked) return { ok: false, reason: 'The API key was revoked.', key };
   if (key.expiresAt && key.expiresAt < now()) return { ok: false, reason: 'The API key has expired.', key };
   return { ok: true, key };

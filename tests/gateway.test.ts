@@ -5,12 +5,12 @@ import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { openDb, setDb, getDb } from '@/lib/db';
 import { createServer } from '@/lib/servers';
-import { createKey } from '@/lib/keys';
+import { createKey, listKeys } from '@/lib/keys';
 import { createGroup, listGroups, setGroupSetting } from '@/lib/groups';
 import { createFile } from '@/lib/context';
 import { updateSettings } from '@/lib/settings';
 import { resetRateLimits } from '@/lib/limits';
-import { handleCompletion, handleModels } from '@/lib/gateway';
+import { handleCompletion, handleModels, type Trace } from '@/lib/gateway';
 
 const PORT = 18000 + Math.floor(Math.random() * 1000);
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -143,5 +143,19 @@ describe('gateway', () => {
     const codes = [];
     for (let i = 0; i < 3; i++) codes.push((await chat(qaSecret, { model: 'qwen3-coder-30b', messages: [{ role: 'user', content: 'hi' }] })).status);
     expect(codes).toEqual([200, 200, 429]);
+  });
+
+  it('can act as a chosen key for the Studio and report the context it added', async () => {
+    const key = listKeys().find((k) => k.name === 'dev')!;
+    const trace: Trace = {};
+    const res = await handleCompletion(
+      new Request('http://studio/v1/chat/completions', { method: 'POST', body: JSON.stringify({ model: 'qwen3-coder-30b', messages: [{ role: 'user', content: 'hi' }] }) }),
+      'chat',
+      { key, trace, source: 'Studio' },
+    );
+    expect(res.status).toBe(200);
+    expect(trace.context?.map((c) => c.name)).toEqual(['rules.md']);
+    expect(JSON.stringify(trace.forwarded)).toContain('House rules');
+    expect(lastLog().ip).toBe('Studio');
   });
 });

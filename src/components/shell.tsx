@@ -19,6 +19,7 @@ interface Summary {
 const MONITOR = [
   { href: '/', label: 'Overview', icon: 'grid' },
   { href: '/activity', label: 'Activity', icon: 'list' },
+  { href: '/studio', label: 'Studio', icon: 'send' },
 ];
 const SETUP = [
   { href: '/servers', label: 'Servers and models' },

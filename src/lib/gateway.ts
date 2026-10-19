@@ -1,7 +1,7 @@
 import { buildContextBlock, estimateTokens, filesByIds } from './context';
 import { contentText, newSegments, renderBlocked, runCheck1, runCheck2, Segment } from './guard';
 import { chainOf, groupPath, listGroups, resolveGroup, Effective } from './groups';
-import { ApiKey, lookupKey, touchKey } from './keys';
+import { ApiKey, checkKey, lookupKey, touchKey } from './keys';
 import { groupAllowed, limitsFor, listLimits, takeToken } from './limits';
 import { LogEntry, Outcome, Step, newRequestId, updateLog, writeLog } from './logs';
 import { countHit, matchRules, redactMessages } from './rules';
@@ -13,6 +13,25 @@ import { apiError, blockedResponse } from './sse';
 
 type Msg = { role?: string; content?: unknown };
 type Kind = 'chat' | 'completions';
+
+/** What the Studio page shows about a request beyond its log entry. */
+export interface Trace {
+  requestId?: string;
+  group?: string;
+  context?: { name: string; tokens: number }[];
+  contextTokens?: number;
+  placement?: 'top' | 'end';
+  forwarded?: unknown;
+}
+
+export interface GatewayOptions {
+  /** Act as this key without its secret (admin Studio only). */
+  key?: ApiKey;
+  /** Filled in as the request moves through the gateway. */
+  trace?: Trace;
+  /** Shown as the client address in the log. */
+  source?: string;
+}
 
 export function clientIp(req: Request): string | null {
   const xf = req.headers.get('x-forwarded-for');
@@ -65,8 +84,10 @@ export function allowedRoutes(key: ApiKey, eff: Effective) {
   return { byModel, groupChain };
 }
 
-export async function handleCompletion(req: Request, kind: Kind): Promise<Response> {
+export async function handleCompletion(req: Request, kind: Kind, opts: GatewayOptions = {}): Promise<Response> {
   const id = newRequestId();
+  const trace = opts.trace ?? {};
+  trace.requestId = id;
   const t0 = performance.now();
   const at = () => Math.round((performance.now() - t0) * 10) / 10;
   let last = 0;
@@ -81,13 +102,13 @@ export async function handleCompletion(req: Request, kind: Kind): Promise<Respon
   const path = new URL(req.url).pathname;
   const steps: Step[] = [];
   const stages: Record<string, number> = {};
-  const log: Partial<LogEntry> & { id: string; ts: number } = { id, ts: Date.now(), ip: clientIp(req), path };
+  const log: Partial<LogEntry> & { id: string; ts: number } = { id, ts: Date.now(), ip: opts.source ?? clientIp(req), path };
 
   const finish = (outcome: Outcome, status: number, reason: string | null, extra: Partial<LogEntry> = {}) =>
     writeLog({ ...log, ...extra, outcome, status_code: status, reason, latency_ms: Math.round(at()), stages, steps });
 
   // 1. Who is calling
-  const found = lookupKey(bearer(req));
+  const found = opts.key ? checkKey(opts.key) : lookupKey(bearer(req));
   stages.auth = lap();
   if (!found.ok) {
     steps.push({ tone: 'bad', head: 'Rejected: no valid key', ms: at(), text: `${found.reason} From ${log.ip ?? 'an unknown address'}. The checks and the model were never reached.` });
@@ -98,6 +119,7 @@ export async function handleCompletion(req: Request, kind: Kind): Promise<Respon
   touchKey(key.id);
   const groups = listGroups();
   const gpath = groupPath(key.groupId, groups);
+  trace.group = gpath;
   Object.assign(log, { key_id: key.id, key_name: key.name, owner: key.owner, group_id: key.groupId, group_name: groups.find((g) => g.id === key.groupId)?.name ?? null });
   steps.push({ tone: 'neutral', head: 'Received', ms: 0, text: `Key ${key.name} (${key.owner}), group ${gpath}${log.ip ? `, IP ${log.ip}` : ''}` });
 
@@ -216,6 +238,9 @@ export async function handleCompletion(req: Request, kind: Kind): Promise<Respon
   lap();
   const files = filesByIds(eff.context);
   const ctx = buildContextBlock(settings.policyPrompt, files);
+  trace.context = files.map((f) => ({ name: f.name, tokens: estimateTokens(f.body) }));
+  trace.contextTokens = ctx ? estimateTokens(ctx) : 0;
+  trace.placement = settings.contextPlacement;
   if (ctx) {
     if (kind === 'chat') body.messages = injectContext(messages, ctx, settings.contextPlacement);
     else body.prompt = `${ctx}\n\n${contentText(messages[0].content)}`;
@@ -223,6 +248,7 @@ export async function handleCompletion(req: Request, kind: Kind): Promise<Respon
   } else if (kind === 'chat') body.messages = messages;
   else body.prompt = contentText(messages[0].content);
   stages.context = lap();
+  trace.forwarded = body;
 
   // 7. Forward to vLLM, failing over between servers
   for (const r of routes) {
