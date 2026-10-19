@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import { Icon, ToastProvider, api, initials } from './ui';
 
 interface Summary {
@@ -34,6 +34,11 @@ const ADVANCED = [
 
 export function Shell({ children }: { children: ReactNode }) {
   const path = usePathname();
+  const mainRef = useRef<HTMLElement>(null);
+  // The main column scrolls on its own, so start each page at its top.
+  useEffect(() => {
+    if (!window.location.hash) mainRef.current?.scrollTo(0, 0);
+  }, [path]);
   const [sum, setSum] = useState<Summary | null>(null);
   useEffect(() => {
     api<Summary>('summary').then(setSum).catch(() => undefined);
@@ -118,7 +123,7 @@ export function Shell({ children }: { children: ReactNode }) {
                 </div>
               </nav>
             </div>
-            <main className="main">{children}</main>
+            <main className="main" ref={mainRef}>{children}</main>
           </div>
         </div>
       </div>
