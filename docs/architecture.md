@@ -29,6 +29,7 @@ Cline ──► /v1/chat/completions ──► auth ► schema ► access & limi
    - `escalate` sends the request straight to check 2.
 5. **Check 1, PIGuard** (`runCheck1` in `src/lib/guard.ts`).
    - It scans only *new segments*: messages after the last assistant turn, which covers the user's new message and new tool results. Cline's `[tool for x] Result:` text counts as a tool result. The system prompt is scanned only if that option is on.
+   - Cline's own trailing `<environment_details>` block (open tabs, file list, time, mode) is not scanned. It is client-generated and classifiers flag it almost every time, which would send every request to the second check. Only that exact shape is removed: it must be the last thing in the message, start with Cline's first heading (`# VSCode Visible Files`), stay under 20 000 characters and contain no further tags. Anything else, such as a fake block inside a file, is scanned like any other text.
    - Text is sent in 1800-character windows to vLLM `POST /classify`. The score is `probs[labelIndex]`.
    - If the server can't be reached, built-in patterns score the text instead. A score at or above the group's threshold flags the request.
 6. **Check 2, the OSS judge** (`runCheck2`). This runs only for flagged or escalated requests.

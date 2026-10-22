@@ -19,6 +19,29 @@ export function contentText(content: unknown): string {
   return '';
 }
 
+const ENV_OPEN = '<environment_details>';
+const ENV_CLOSE = '</environment_details>';
+
+/**
+ * Cline appends its own <environment_details> block (open tabs, file list, time, mode) to the END of every
+ * user message. It is client-generated, not tool output, and classifiers such as PIGuard flag it almost every
+ * time, which sends each request to the second check for nothing.
+ *
+ * To keep this from becoming a hiding place for an attack, only that exact shape is removed: the block must be
+ * the very last thing in the message, start with Cline's first heading, stay under 20 000 characters and
+ * contain no further tags. Anything else (a fake block inside a file, an unterminated block, a block followed
+ * by more text) is left alone and scanned like any other text.
+ */
+export function stripClineEnvironment(text: string): string {
+  const t = text.trimEnd();
+  if (!t.endsWith(ENV_CLOSE)) return text;
+  const start = t.lastIndexOf(ENV_OPEN);
+  if (start < 0) return text;
+  const inner = t.slice(start + ENV_OPEN.length, t.length - ENV_CLOSE.length);
+  if (inner.length > 20000 || inner.includes('<') || !/^\s*#\s*VSCode Visible Files\b/.test(inner)) return text;
+  return t.slice(0, start).trimEnd();
+}
+
 /**
  * Agents resend the whole conversation every turn. Only what arrived since the
  * model last spoke is new, so that is all we scan.
@@ -35,7 +58,7 @@ export function newSegments(messages: Msg[], scan: GuardSettings['scan']): Segme
   for (const m of messages.slice(lastAssistant + 1)) {
     if (m.role === 'user' && scan.user) {
       // Cline puts tool output inside user messages; treat tagged blocks as tool results.
-      const text = contentText(m.content);
+      const text = stripClineEnvironment(contentText(m.content));
       const isToolish = /^\s*\[(?:\w+ for|read_file|execute_command|browser_action|use_mcp_tool)[^\]]*\] Result:/m.test(text);
       push(out, isToolish && scan.tool ? 'tool result' : 'user message', text);
     } else if (m.role === 'tool' && scan.tool) {
