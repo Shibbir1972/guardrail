@@ -114,8 +114,8 @@ CREATE TABLE IF NOT EXISTS request_logs (
   model TEXT,
   server TEXT,
   c1_score REAL,
-  c1_status TEXT,                               -- clean | flagged | skipped | not_run
-  c2_status TEXT,                               -- allow | block | skipped | not_run | error
+  c1_status TEXT,                               -- clean | flagged | skipped | off | not_run
+  c2_status TEXT,                               -- allow | block | skipped | off | not_run | error
   c2_reason TEXT,
   outcome TEXT NOT NULL,                        -- answered | false_alarm | blocked | rejected | error
   status_code INTEGER,

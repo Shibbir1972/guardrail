@@ -219,8 +219,11 @@ const routes: Record<string, Handler> = {
     const segments = [{ source: (body.source === 'tool' ? 'tool result' : 'user message') as 'tool result' | 'user message', text: String(body.text ?? '') }];
     const c1 = await runCheck1(segments, s.guard);
     const flagged = c1.score >= eff.piguard_threshold;
-    const c2 = flagged ? await runCheck2(segments, c1.quote, eff.oss_prompt, s.guard) : null;
-    return { threshold: eff.piguard_threshold, c1, flagged, c2, builtin: builtinScore(segments) };
+    // Same routing as the gateway: with PIGuard off, check 2 judges everything (if it is on).
+    const c1On = s.guard.piguard.enabled;
+    const toCheck2 = c1On ? flagged : s.guard.oss.enabled;
+    const c2 = toCheck2 ? await runCheck2(segments, c1On ? c1.quote : null, eff.oss_prompt, s.guard) : null;
+    return { threshold: eff.piguard_threshold, c1, c1On, c2On: s.guard.oss.enabled, flagged, c2, builtin: builtinScore(segments) };
   },
 
   // ---- activity ----
@@ -346,7 +349,7 @@ const routes: Record<string, Handler> = {
       servers: servers.filter((s) => s.role === 'inference').length,
       groups: listGroups().length,
       keys: listKeys().filter((k) => !k.revoked).length,
-      guard: getSettings().guard.enabled,
+      guard: getSettings().guard.piguard.enabled || getSettings().guard.oss.enabled,
       blockedToday: countByFilter(Date.now() - 86400_000).blocked,
       name: process.env.GUARDRAIL_ADMIN_NAME || 'Admin',
       authEnabled: !!process.env.GUARDRAIL_ADMIN_PASSWORD,

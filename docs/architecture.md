@@ -31,9 +31,11 @@ Cline ──► /v1/chat/completions ──► auth ► schema ► access & limi
    - It scans only *new segments*: messages after the last assistant turn, which covers the user's new message and new tool results. Cline's `[tool for x] Result:` text counts as a tool result. The system prompt is scanned only if that option is on.
    - Text is sent in 1800-character windows to vLLM `POST /classify`. The score is `probs[labelIndex]`.
    - If the server can't be reached, built-in patterns score the text instead. A score at or above the group's threshold flags the request.
-6. **Check 2, the OSS judge** (`runCheck2`). This runs only for flagged or escalated requests.
+   - Check 1 can be switched off on its own (`guard.piguard.enabled`). It is then logged as `off` and skipped.
+6. **Check 2, the OSS judge** (`runCheck2`). With PIGuard on, this runs only for flagged or escalated requests. With PIGuard off, it runs for every request that has new content, and its verdict alone decides. With both checks off, requests go straight on.
    - It sends the group's OSS prompt and the flagged content to `/v1/chat/completions` with `reasoning_effort`, and asks for `{"verdict":"allow|block","reason":"…"}`.
-   - `block` returns the blocked reply. `allow` lets the request through, and it is logged as a *false alarm*.
+   - `block` returns the blocked reply. `allow` lets the request through; if PIGuard had flagged it, it is logged as a *false alarm*.
+   - If check 2 is off but PIGuard flags a request, the "on timeout" setting decides (block by default).
    - A timeout or error follows the "on timeout" setting.
 7. **Context.** The policy prompt and the group's context files, in order, are wrapped in `<project_context file="…">` tags. They go at the **top of the first system message** (or just before the last user message, if that placement is chosen). Placing them at the top keeps an identical prefix across requests, so vLLM's automatic prefix caching can reuse it.
 8. **Forward.** The request goes to the first healthy server that serves the model. If a server fails before responding, the next one is tried and the failed one is marked down. Streams are passed through as they arrive, and the log row is finalized when the stream ends or the client disconnects.

@@ -210,37 +210,53 @@ export async function handleCompletion(req: Request, kind: Kind, opts: GatewayOp
     steps.push({ tone: 'warn', head: `Rule "${escHit.rule.name}" sent it to check 2`, ms: at(), text: `Matched in a ${escHit.source}:`, quote: escHit.match });
   }
 
-  // 5. The two guard checks
+  // 5. The two guard checks. Each can be off on its own: with PIGuard off,
+  // check 2 judges every request; with both off, requests go straight on.
   let outcome: Outcome = redacted ? 'redacted' : 'answered';
-  if (settings.guard.enabled) {
-    const c1 = await runCheck1(segments, settings.guard);
+  const g = settings.guard;
+  const c1On = g.enabled && g.piguard.enabled;
+  const c2On = g.enabled && g.oss.enabled;
+  const judge = settings.guard.oss.model.split('/').pop();
+  let toCheck2 = false;
+  let c1Flagged = false;
+  let c1Quote: string | null = null;
+  if (c1On) {
+    const c1 = await runCheck1(segments, g);
     stages.piguard = c1.ms;
     log.c1_score = c1.score;
-    const flagged = c1.score >= eff.piguard_threshold || escalate;
-    log.c1_status = !segments.length ? 'skipped' : c1.score >= eff.piguard_threshold ? 'flagged' : 'clean';
+    c1Flagged = c1.score >= eff.piguard_threshold;
+    c1Quote = c1.quote;
+    toCheck2 = c1Flagged || escalate;
+    log.c1_status = !segments.length ? 'skipped' : c1Flagged ? 'flagged' : 'clean';
     if (c1.error) steps.push({ tone: 'warn', head: 'Check 1 fell back to built-in patterns', ms: at(), text: c1.error });
     if (!segments.length) steps.push({ tone: 'ok', head: 'Check 1 · nothing new to scan', ms: at(), text: 'No new user message or tool result since the model last answered.' });
-    else if (c1.score >= eff.piguard_threshold)
+    else if (c1Flagged)
       steps.push({ tone: 'warn', head: `Check 1 · PIGuard flagged it (${c1.score.toFixed(2)})`, ms: at(), text: `Score is at or above the limit of ${eff.piguard_threshold.toFixed(2)} (${c1.engine}). Text that triggered it, from a ${c1.source}:`, quote: c1.quote ?? undefined });
     else steps.push({ tone: 'ok', head: `Check 1 · PIGuard: clean (${c1.score.toFixed(2)})`, ms: at(), text: `Below the limit of ${eff.piguard_threshold.toFixed(2)}, so check 2 was skipped.` });
-
-    if (flagged) {
-      const c2 = await runCheck2(segments, c1.quote ?? escHit?.match ?? null, eff.oss_prompt, settings.guard);
-      stages.oss = c2.ms;
-      log.c2_status = c2.error ? (c2.verdict === 'block' ? 'error' : 'allow') : c2.verdict;
-      log.c2_reason = c2.reason;
-      if (c2.verdict === 'block') {
-        steps.push({ tone: 'bad', head: `Check 2 · ${settings.guard.oss.model.split('/').pop()}: block`, ms: at(), text: c2.error ? `It could not decide: ${c2.error}.` : 'Its reasoning:', why: c2.reasoning ? `${c2.reason}\n\n${c2.reasoning}` : c2.reason });
-        return block(c2.reason, {});
-      }
-      steps.push({ tone: 'ok', head: `Check 2 · ${settings.guard.oss.model.split('/').pop()}: allow`, ms: at(), text: c2.error ? `It could not decide (${c2.error}); allowed by setting.` : 'Its reasoning:', why: c2.reasoning ? `${c2.reason}\n\n${c2.reasoning}` : c2.reason });
-      if (c1.score >= eff.piguard_threshold) outcome = 'false_alarm';
-    } else log.c2_status = 'skipped';
   } else {
-    log.c1_status = 'not_run';
-    log.c2_status = 'not_run';
-    steps.push({ tone: 'neutral', head: 'Guard checks are off', ms: at(), text: 'Turn them on in Guard checks.' });
+    log.c1_status = 'off';
+    // Nothing new means nothing for the judge to read either.
+    toCheck2 = c2On && segments.length > 0;
+    steps.push({
+      tone: 'neutral',
+      head: 'Check 1 · PIGuard is off',
+      ms: at(),
+      text: !c2On ? 'Check 2 is off too, so no guard check ran.' : toCheck2 ? `Sent straight to check 2 (${judge}).` : 'Nothing new to scan, so check 2 was skipped.',
+    });
   }
+
+  if (toCheck2) {
+    const c2 = await runCheck2(segments, c1Quote ?? escHit?.match ?? null, eff.oss_prompt, g);
+    stages.oss = c2.ms;
+    log.c2_status = c2.error ? (c2.verdict === 'block' ? 'error' : 'allow') : c2.verdict;
+    log.c2_reason = c2.reason;
+    if (c2.verdict === 'block') {
+      steps.push({ tone: 'bad', head: `Check 2 · ${judge}: block`, ms: at(), text: c2.error ? `It could not decide: ${c2.error}.` : 'Its reasoning:', why: c2.reasoning ? `${c2.reason}\n\n${c2.reasoning}` : c2.reason });
+      return block(c2.reason, {});
+    }
+    steps.push({ tone: 'ok', head: `Check 2 · ${judge}: allow`, ms: at(), text: c2.error ? `It could not decide (${c2.error}); allowed by setting.` : 'Its reasoning:', why: c2.reasoning ? `${c2.reason}\n\n${c2.reasoning}` : c2.reason });
+    if (c1Flagged) outcome = 'false_alarm';
+  } else log.c2_status = c2On ? 'skipped' : 'off';
 
   // 6. Project context
   lap();

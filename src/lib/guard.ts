@@ -174,7 +174,8 @@ export async function runCheck2(segments: Segment[], flagged: string | null, pro
   const server = g.oss.serverId ? getServer(g.oss.serverId) : undefined;
   if (!g.oss.enabled || !server) {
     const verdict = g.oss.onTimeout;
-    return { verdict, reason: verdict === 'block' ? 'Check 1 flagged it and no second check is set up.' : 'Check 1 flagged it; no second check is set up, so it was let through.', reasoning: null, ms: ms(), error: 'No OSS check server configured' };
+    const what = flagged ? 'Check 1 flagged it' : 'It needed the second check';
+    return { verdict, reason: verdict === 'block' ? `${what} and no second check is set up.` : `${what}; no second check is set up, so it was let through.`, reasoning: null, ms: ms(), error: g.oss.enabled ? 'No OSS check server configured' : 'The second check is off' };
   }
   try {
     const res = await fetch(`${server.url}/v1/chat/completions`, {

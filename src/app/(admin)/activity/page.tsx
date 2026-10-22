@@ -174,6 +174,7 @@ function C1({ r }: { r: LogEntry }) {
   if (r.c1_status === 'flagged') return <span className="pill warn">{r.c1_score?.toFixed(2)} flagged</span>;
   if (r.c1_status === 'clean') return <span className="pill ok">{r.c1_score?.toFixed(2)} clean</span>;
   if (r.c1_status === 'skipped') return <span className="pill">Nothing new</span>;
+  if (r.c1_status === 'off') return <span className="pill">Off</span>;
   return <span className="pill">Not run</span>;
 }
 
@@ -182,6 +183,7 @@ function C2({ r }: { r: LogEntry }) {
   if (r.c2_status === 'error') return <span className="pill bad">Failed, blocked</span>;
   if (r.c2_status === 'allow') return <span className="pill ok">Allow</span>;
   if (r.c2_status === 'skipped') return <span className="pill">Skipped</span>;
+  if (r.c2_status === 'off') return <span className="pill">Off</span>;
   return <span className="pill">Not run</span>;
 }
 
