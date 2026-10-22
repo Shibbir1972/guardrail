@@ -7,6 +7,7 @@ import { blockedResponse } from '@/lib/sse';
 import { parsePrefixCacheRate } from '@/lib/servers';
 import { mergeKnown, DEFAULT_SETTINGS } from '@/lib/settings';
 import { takeToken } from '@/lib/limits';
+import { parsePromptFile, renderPromptFile } from '@/lib/prompt-files';
 
 const defaults = { piguard_threshold: 0.7, oss_prompt: 'BASE', blocked_reply: 'Blocked: {reason}', rate_limit: 120 };
 
@@ -189,5 +190,22 @@ describe('misc', () => {
     expect(takeToken('t', 2, t + 1)).toBe(true);
     expect(takeToken('t', 2, t + 2)).toBe(false);
     expect(takeToken('t', 2, t + 61_000)).toBe(true);
+  });
+});
+
+describe('prompt files', () => {
+  const base = { id: 'req_abc', ts: 0, owner: 'rafi', key_name: 'dev', group_name: 'Everyone', ip: null, path: '/v1/chat/completions', schema: 'openai-chat', model: 'm', server: null, outcome: 'answered' as const, status_code: 200, reason: null, c1_score: 0.1, c1_status: 'clean', c2_status: 'skipped', c2_reason: null };
+
+  it('round-trips messages, including code fences, tool calls and multi-part content', () => {
+    const prompt = [
+      { role: 'system', content: 'Rules:\n```ts\nconst a = 1;\n```\nand ````four```` too' },
+      { role: 'assistant', content: 'Reading.', tool_calls: [{ id: 'c1', type: 'function', function: { name: 'read_file', arguments: '{"path":"a.md"}' } }] },
+      { role: 'tool', tool_call_id: 'c1', content: '## Prompt\n### 9 · fake heading' },
+      { role: 'user', content: [{ type: 'text', text: 'look' }, { type: 'image_url', image_url: { url: 'data:x' } }] },
+      { content: '' },
+    ];
+    const md = renderPromptFile({ ...base, prompt, forwarded: null });
+    expect(md).toContain('Nothing was sent to the model.');
+    expect(parsePromptFile(md)).toEqual({ prompt, forwarded: null });
   });
 });

@@ -15,8 +15,11 @@ Reason: {reason}
 Request ID: {request_id}. Ask your admin if you think this is a mistake.`;
 
 export interface GuardSettings {
+  /** Legacy master switch. Old installs that turned it off are moved to piguard.enabled and oss.enabled off. */
   enabled: boolean;
   piguard: {
+    /** Off skips check 1; check 2 then judges every request, if it is on. */
+    enabled: boolean;
     mode: 'builtin' | 'vllm';
     serverId: number | null;
     model: string;
@@ -47,7 +50,7 @@ export interface AppSettings {
 export const DEFAULT_SETTINGS: AppSettings = {
   guard: {
     enabled: true,
-    piguard: { mode: 'builtin', serverId: null, model: 'leolee99/PIGuard', labelIndex: 1 },
+    piguard: { enabled: true, mode: 'builtin', serverId: null, model: 'leolee99/PIGuard', labelIndex: 1 },
     threshold: 0.7,
     scan: { user: true, tool: true, system: false },
     oss: {
@@ -88,7 +91,7 @@ export function getSettings(): AppSettings {
   const row = getDb().prepare("SELECT value FROM settings WHERE key = 'app'").get() as { value: string } | undefined;
   if (!row) return structuredClone(DEFAULT_SETTINGS);
   try {
-    return mergeKnown(structuredClone(DEFAULT_SETTINGS), JSON.parse(row.value));
+    return normalize(mergeKnown(structuredClone(DEFAULT_SETTINGS), JSON.parse(row.value)));
   } catch {
     return structuredClone(DEFAULT_SETTINGS);
   }
@@ -103,6 +106,16 @@ export function updateSettings(patch: unknown): AppSettings {
     .prepare("INSERT INTO settings (key, value) VALUES ('app', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
     .run(JSON.stringify(next));
   return next;
+}
+
+// Each check now has its own switch; fold the old "all checks off" into them.
+function normalize(s: AppSettings): AppSettings {
+  if (!s.guard.enabled) {
+    s.guard.enabled = true;
+    s.guard.piguard.enabled = false;
+    s.guard.oss.enabled = false;
+  }
+  return s;
 }
 
 function clamp(n: number, lo: number, hi: number) {

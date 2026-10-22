@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { getDb } from './db';
+import { prunePromptFiles, readPromptFile, retentionDays, writePromptFile } from './prompt-files';
 
 export type Outcome = 'answered' | 'false_alarm' | 'blocked' | 'redacted' | 'rejected' | 'error';
 
@@ -44,48 +45,61 @@ export interface LogEntry {
   stages: Record<string, number>;
   steps: Step[];
   feedback: string | null;
-  /** Only filled by getLog; lists leave the prompts out to stay small. */
+  /** The request's Markdown file, relative to the prompts folder. */
+  prompt_file: string | null;
+  /** Read from prompt_file by getLog only; lists leave them out. */
   prompt?: PromptMessage[] | null;
   forwarded?: PromptMessage[] | null;
+  /** True when the file was deleted by the retention rule. */
+  prompt_expired?: boolean;
 }
 
-type Row = Omit<LogEntry, 'stages' | 'steps' | 'prompt' | 'forwarded'> & { stages: string; steps: string; prompt?: string | null; forwarded?: string | null };
+type Row = Omit<LogEntry, 'stages' | 'steps' | 'prompt' | 'forwarded' | 'prompt_expired'> & { stages: string; steps: string };
 
-/** Longest text kept per message. Agents resend whole files, so this caps how big one log row can get. */
-export const PROMPT_TEXT_LIMIT = 200_000;
-
-function capText(s: string) {
-  return s.length > PROMPT_TEXT_LIMIT ? `${s.slice(0, PROMPT_TEXT_LIMIT)}\n\n[GuardRail: cut ${(s.length - PROMPT_TEXT_LIMIT).toLocaleString('en')} more characters from this log]` : s;
-}
-
-/** Copy of the messages that is safe to store: long text is cut. */
+/** A shallow copy of the messages for the prompt file; anything that isn't a list is no prompt. */
 export function promptForLog(messages: unknown): PromptMessage[] | null {
   if (!Array.isArray(messages)) return null;
-  return messages.map((m) => {
-    if (!m || typeof m !== 'object') return { content: capText(String(m)) };
-    const msg = { ...(m as PromptMessage) };
-    if (typeof msg.content === 'string') msg.content = capText(msg.content);
-    else if (Array.isArray(msg.content))
-      msg.content = msg.content.map((p) => (p && typeof p === 'object' && typeof (p as { text?: unknown }).text === 'string' ? { ...p, text: capText((p as { text: string }).text) } : p));
-    return msg;
-  });
+  return messages.map((m) => (m && typeof m === 'object' ? { ...(m as PromptMessage) } : { content: String(m) }));
 }
-
-const jsonOrNull = (v: unknown) => (v === undefined || v === null ? null : JSON.stringify(v));
 
 export const newRequestId = () => 'req_' + crypto.randomBytes(6).toString('hex');
 
-const COLS = ['id', 'ts', 'key_id', 'key_name', 'owner', 'group_id', 'group_name', 'ip', 'path', 'schema', 'model', 'server', 'c1_score', 'c1_status', 'c2_status', 'c2_reason', 'outcome', 'status_code', 'reason', 'latency_ms', 'tokens_out', 'stages', 'steps', 'feedback', 'prompt', 'forwarded'] as const;
-const JSON_COLS = ['stages', 'steps', 'prompt', 'forwarded'];
-// Everything but the prompts, for lists.
-const LIST_COLS = COLS.filter((c) => c !== 'prompt' && c !== 'forwarded').join(', ');
+const COLS = ['id', 'ts', 'key_id', 'key_name', 'owner', 'group_id', 'group_name', 'ip', 'path', 'schema', 'model', 'server', 'c1_score', 'c1_status', 'c2_status', 'c2_reason', 'outcome', 'status_code', 'reason', 'latency_ms', 'tokens_out', 'stages', 'steps', 'feedback', 'prompt_file'] as const;
+const JSON_COLS = ['stages', 'steps'];
+const SELECT_COLS = COLS.join(', ');
+
+// Pruning runs at most this often, from the write path, so no separate job is needed.
+const PRUNE_EVERY = 3600_000;
+const g = globalThis as unknown as { __grPrunedAt?: number };
+
+/** Delete prompt files past the retention period and clear their paths. */
+export function prunePrompts(at = Date.now()) {
+  g.__grPrunedAt = at;
+  const files = prunePromptFiles(at);
+  getDb().prepare('UPDATE request_logs SET prompt_file = NULL WHERE prompt_file IS NOT NULL AND ts < ?').run(at - retentionDays() * 86400_000);
+  return files;
+}
+
+function maybePrune() {
+  if (Date.now() - (g.__grPrunedAt ?? 0) < PRUNE_EVERY) return;
+  try {
+    prunePrompts();
+  } catch (err) {
+    console.error('GuardRail: pruning prompt files failed:', err);
+  }
+}
 
 export function writeLog(e: Partial<LogEntry> & { id: string; ts: number; outcome: Outcome }) {
-  const row: Record<string, unknown> = { ...e, stages: JSON.stringify(e.stages ?? {}), steps: JSON.stringify(e.steps ?? []), prompt: jsonOrNull(e.prompt), forwarded: jsonOrNull(e.forwarded) };
+  const { prompt, forwarded, ...rest } = e;
+  const row: Record<string, unknown> = { ...rest, stages: JSON.stringify(e.stages ?? {}), steps: JSON.stringify(e.steps ?? []) };
+  if (prompt !== undefined || forwarded !== undefined) row.prompt_file = writePromptFile({ ...blankFileEntry, ...e });
   getDb()
     .prepare(`INSERT OR REPLACE INTO request_logs (${COLS.join(', ')}) VALUES (${COLS.map((c) => '@' + c).join(', ')})`)
     .run(Object.fromEntries(COLS.map((c) => [c, row[c] ?? null])));
+  maybePrune();
 }
+
+const blankFileEntry = { owner: null, key_name: null, group_name: null, ip: null, path: null, schema: null, model: null, server: null, status_code: null, reason: null, c1_score: null, c1_status: null, c2_status: null, c2_reason: null };
 
 export function updateLog(id: string, patch: Partial<LogEntry>) {
   const sets: string[] = [];
@@ -93,18 +107,17 @@ export function updateLog(id: string, patch: Partial<LogEntry>) {
   for (const [k, v] of Object.entries(patch)) {
     if (!(COLS as readonly string[]).includes(k) || k === 'id') continue;
     sets.push(`${k} = @${k}`);
-    vals[k] = JSON_COLS.includes(k) ? jsonOrNull(v) : v;
+    vals[k] = JSON_COLS.includes(k) ? JSON.stringify(v) : v;
   }
   if (sets.length) getDb().prepare(`UPDATE request_logs SET ${sets.join(', ')} WHERE id = @id`).run(vals);
+  // A stream finishes after its row was written; bring the file's steps up to date.
+  if (patch.steps) {
+    const l = getLog(id);
+    if (l?.prompt_file && (l.prompt || l.forwarded)) writePromptFile(l, l.prompt_file);
+  }
 }
 
-const parse = (r: Row): LogEntry => {
-  const { prompt, forwarded, ...rest } = r;
-  const e: LogEntry = { ...rest, stages: safeJson(r.stages, {}), steps: safeJson(r.steps, []) };
-  if ('prompt' in r) e.prompt = safeJson(prompt, null);
-  if ('forwarded' in r) e.forwarded = safeJson(forwarded, null);
-  return e;
-};
+const parse = (r: Row): LogEntry => ({ ...r, stages: safeJson(r.stages, {}), steps: safeJson(r.steps, []) });
 
 function safeJson<T>(s: string | null | undefined, d: T): T {
   if (s === null || s === undefined) return d;
@@ -116,8 +129,14 @@ function safeJson<T>(s: string | null | undefined, d: T): T {
 }
 
 export function getLog(id: string): LogEntry | undefined {
-  const r = getDb().prepare('SELECT * FROM request_logs WHERE id = ?').get(id) as Row | undefined;
-  return r ? parse(r) : undefined;
+  const r = getDb().prepare(`SELECT ${SELECT_COLS} FROM request_logs WHERE id = ?`).get(id) as Row | undefined;
+  if (!r) return undefined;
+  const e = parse(r);
+  const file = e.prompt_file ? readPromptFile(e.prompt_file) : null;
+  e.prompt = file?.prompt ?? null;
+  e.forwarded = file?.forwarded ?? null;
+  if (!file) e.prompt_expired = e.ts < Date.now() - retentionDays() * 86400_000;
+  return e;
 }
 
 export const OUTCOME_FILTERS: Record<string, Outcome[]> = {
@@ -148,7 +167,7 @@ export function queryLogs(opts: { filter?: string; q?: string; limit?: number; b
     where.push('ts >= ?');
     args.push(opts.since);
   }
-  const sql = `SELECT ${LIST_COLS} FROM request_logs ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY ts DESC LIMIT ?`;
+  const sql = `SELECT ${SELECT_COLS} FROM request_logs ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY ts DESC LIMIT ?`;
   args.push(Math.min(opts.limit ?? 100, 5000));
   return (getDb().prepare(sql).all(...args) as Row[]).map(parse);
 }
