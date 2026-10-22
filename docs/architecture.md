@@ -55,7 +55,9 @@ The text comes from the template on the Guard page, with `{reason}` and `{reques
 
 ## Group inheritance (`src/lib/groups.ts`)
 
-Groups form a tree under one root. The settings that inherit are `servers`, `models`, `context`, `piguard_threshold`, `oss_prompt`, `blocked_reply` and `rate_limit`. Each group stores, for each setting, either nothing (inherit) or one of three modes:
+**Turning a check off for a group.** `piguard_enabled` and `oss_enabled` are on/off flags. They start from the switches on the Guard checks page, so every group is checked the way that page says. A group can set either to **off** to bypass that check for all its keys, or to **on** (a sub-group can switch a check back on under a group that turned it off). Flags replace the parent's value; they never add. The gateway uses the resolved flags: PIGuard off sends every request with new content to check 2, check 2 off makes a flagged request follow "if it fails or times out", both off goes straight to the model. Activity records `off` for a skipped check and a step naming the group.
+
+Groups form a tree under one root. The settings that inherit are `servers`, `models`, `context`, `piguard_enabled`, `piguard_threshold`, `oss_enabled`, `oss_prompt`, `blocked_reply` and `rate_limit`. Each group stores, for each setting, either nothing (inherit) or one of three modes:
 
 | Mode | Lists (servers, models, context) | Values | OSS prompt |
 | --- | --- | --- | --- |

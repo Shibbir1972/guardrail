@@ -272,3 +272,48 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
   .nav a { white-space: nowrap; min-height: 40px; }
   .topbar { padding: 14px 16px; }
 }
+
+/* ---- group tree (Groups page, Context page): collapsible, connector lines, names never wrap ---- */
+.gt, .gt ul { list-style: none; margin: 0; padding: 0; }
+.gt-item { position: relative; }
+.gt-row { display: flex; align-items: center; gap: 4px; min-height: 40px; border: 1px solid transparent; border-radius: 10px; padding-right: 8px; }
+.gt-row:hover { background: var(--frame); }
+.gt-row.on { background: var(--accent-tint); border-color: var(--accent-line); }
+.gt-chev { flex: none; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border: 0; background: transparent; border-radius: 6px; color: var(--ink-3); cursor: pointer; }
+.gt-chev svg { transition: transform .12s ease; }
+.gt-chev[aria-expanded="true"] svg { transform: rotate(90deg); }
+.gt-chev:hover { background: var(--panel); }
+.gt-leaf { cursor: default; }
+.gt-leaf:hover { background: transparent; }
+.gt-name { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 8px; border: 0; background: transparent; text-align: left; cursor: pointer; font-weight: 600; font-size: 13.5px; color: var(--ink); padding: 5px 4px; border-radius: 8px; }
+.gt-row.on .gt-name { color: var(--accent); }
+.gt-txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gt-count { flex: none; font-size: 12px; font-weight: 500; color: var(--muted); white-space: nowrap; }
+.gt-more { flex: none; font-size: 11px; font-weight: 700; color: var(--ink-3); background: var(--panel); border-radius: 999px; padding: 1px 7px; }
+.gt-chev:focus-visible, .gt-name:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* connector lines: a vertical rule per sibling that stops at the last one, and a short elbow into each row */
+.gt-kids { margin-left: 12px; }
+.gt-kids > .gt-item { padding-left: 16px; }
+.gt-kids > .gt-item::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; border-left: 2px solid #D3D6DE; }
+.gt-kids > .gt-item:last-child::before { bottom: auto; height: 21px; }
+.gt-kids > .gt-item::after { content: ''; position: absolute; left: 0; top: 20px; width: 14px; border-top: 2px solid #D3D6DE; }
+.gt-scroll { overflow-x: auto; }
+
+/* ---- drill-down group picker (API keys page) ---- */
+.gc { display: flex; flex-direction: column; gap: 10px; }
+.gc-row { display: flex; flex-direction: column; gap: 6px; padding-left: 10px; border-left: 2px solid var(--accent-line); }
+.gc-row:first-child { padding-left: 0; border-left: 0; }
+.gc-label { font-size: 11.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+
+/* ---- Context page group chooser ---- */
+.gpick { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px 12px; max-width: 460px; max-height: 400px; overflow: auto; }
+.gpick-hd { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 2px 4px 8px; font-size: 13px; }
+
+/* ---- per-group check switches (Groups page, Guard tab) ---- */
+.chk { display: grid; grid-template-columns: minmax(180px, 1.2fr) minmax(220px, 2fr); gap: 10px 18px; align-items: center; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
+.chk + .chk { margin-top: 10px; }
+.chk h3 { font-size: 14px; font-weight: 700; margin: 0 0 3px; }
+.chk .sub { font-size: 12.5px; color: var(--muted); }
+.chk .state { display: inline-flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 12.5px; }
+.chk .seg { flex-wrap: nowrap; }
+@media (max-width: 760px) { .chk { grid-template-columns: 1fr; } }

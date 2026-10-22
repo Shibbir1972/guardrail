@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveLayers } from '@/lib/groups';
+import { normalizeSetting, resolveLayers } from '@/lib/groups';
 import { detectSchema } from '@/lib/schemas';
 import { builtinScore, newSegments, parseVerdict, renderBlocked, stripClineEnvironment } from '@/lib/guard';
 import { injectContext } from '@/lib/gateway';
@@ -9,7 +9,7 @@ import { mergeKnown, DEFAULT_SETTINGS } from '@/lib/settings';
 import { takeToken } from '@/lib/limits';
 import { parsePromptFile, renderPromptFile } from '@/lib/prompt-files';
 
-const defaults = { piguard_threshold: 0.7, oss_prompt: 'BASE', blocked_reply: 'Blocked: {reason}', rate_limit: 120 };
+const defaults = { piguard_enabled: true, oss_enabled: true, piguard_threshold: 0.7, oss_prompt: 'BASE', blocked_reply: 'Blocked: {reason}', rate_limit: 120 };
 
 describe('group inheritance', () => {
   const layers = [
@@ -43,6 +43,40 @@ describe('group inheritance', () => {
     const r = resolveLayers([...layers, { name: 'QA', settings: { models: { mode: 'override', value: ['tiny'] } } }, { name: 'This key', settings: { context: { mode: 'add', value: [9] } } }], defaults);
     expect(r.effective.models).toEqual(['tiny']);
     expect(r.effective.context).toEqual([1, 2, 3, 9]);
+  });
+
+  describe('turning the checks off for a group', () => {
+    const off = { mode: 'override' as const, value: false };
+    const on = { mode: 'override' as const, value: true };
+
+    it('starts from the Guard checks page: every group is checked unless it says otherwise', () => {
+      const r = resolveLayers([{ name: 'Company', settings: {} }, { name: 'Dev', settings: {} }], defaults);
+      expect([r.effective.piguard_enabled, r.effective.oss_enabled]).toEqual([true, true]);
+      const offEverywhere = resolveLayers([{ name: 'Company', settings: {} }], { ...defaults, piguard_enabled: false, oss_enabled: false });
+      expect([offEverywhere.effective.piguard_enabled, offEverywhere.effective.oss_enabled]).toEqual([false, false]);
+    });
+
+    it('lets a group bypass either check and a sub-group switch one back on', () => {
+      const r = resolveLayers(
+        [
+          { name: 'Company', settings: {} },
+          { name: 'Contractors', settings: { piguard_enabled: off, oss_enabled: off } },
+          { name: 'Reviewed', settings: { oss_enabled: on } },
+        ],
+        defaults,
+      );
+      expect(r.effective.piguard_enabled).toBe(false);
+      expect(r.effective.oss_enabled).toBe(true);
+      expect(r.sources.piguard_enabled).toEqual(['Contractors']);
+      expect(r.sources.oss_enabled).toEqual(['Reviewed']);
+      expect(r.matrix.find((m) => m.key === 'piguard_enabled')!.cells.map((c) => c.state)).toEqual(['inherited', 'override', 'inherited']);
+    });
+
+    it('stores a flag as a plain on/off value and rejects anything else', () => {
+      expect(normalizeSetting('piguard_enabled', { mode: 'add', value: false }, false)).toEqual({ mode: 'override', value: false });
+      expect(normalizeSetting('oss_enabled', { mode: 'override', value: true }, true)).toEqual({ mode: 'set', value: true });
+      expect(() => normalizeSetting('oss_enabled', { mode: 'override', value: 'yes' }, false)).toThrow(/on or off/);
+    });
   });
 });
 

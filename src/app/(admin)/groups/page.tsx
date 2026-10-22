@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { display } from '@/components/format-setting';
+import { GroupTree } from '@/components/group-tree';
 import { Icon, Loading, Modal, PageHead, Switch, api, groupColor, initials, useAction, useApi } from '@/components/ui';
 import type { Group, GroupSettings, Resolution, SettingKey, SettingValue, StoredSetting } from '@/lib/groups';
 import type { ApiKey } from '@/lib/keys';
@@ -75,26 +76,12 @@ function Groups() {
           <Loading error={list.error} />
         ) : (
           <div className="row">
-            <aside className="card" style={{ flex: '1 1 240px', maxWidth: '100%', padding: 14 }} aria-label="Group tree">
+            <aside className="card" style={{ flex: '0 1 330px', minWidth: 260, maxWidth: '100%', padding: 14 }} aria-label="Group tree">
               <div className="lbl" style={{ padding: '4px 8px 8px' }}>
                 Group tree
               </div>
-              <div className="stack" style={{ gap: 2 }}>
-                {list.data.groups.map((g) => {
-                  const [bg, fg] = groupColor(g.id, g.parentId === null);
-                  return (
-                    <button key={g.id} type="button" className={g.id === selId ? 'tnode on' : 'tnode'} style={{ paddingLeft: 8 + g.depth * 22 }} onClick={() => setSel(g.id)}>
-                      {g.depth > 0 && <span className="elbow" aria-hidden="true" />}
-                      <span className="gdot" style={{ background: bg, color: fg }}>
-                        {initials(g.name)}
-                      </span>
-                      <span style={{ flex: '1 1 auto' }}>{g.name}</span>
-                      <span className="muted" style={{ fontSize: 12, fontWeight: 500 }}>
-                        {g.keyCount} key{g.keyCount === 1 ? '' : 's'}
-                      </span>
-                    </button>
-                  );
-                })}
+              <div className="gt-scroll">
+                <GroupTree groups={list.data.groups} selectedId={selId} onSelect={setSel} />
               </div>
               {selId && (
                 <button type="button" className="btn sm dash" style={{ margin: '12px 8px 4px' }} onClick={() => setCreating(selId)}>
@@ -469,6 +456,18 @@ function Guard({ one, save }: { one: One; save: Save }) {
 
   return (
     <div className="stack" style={{ gap: 18 }}>
+      <div>
+        <span className="lbl">Checks for {g.name}</span>
+        <div className="muted small" style={{ marginBottom: 10 }}>
+          Every group is checked the way the <Link href="/guard">Guard checks page</Link> says. Turn a check off here to let {g.name}{isRoot ? '' : ' and its sub-groups'} skip it. A sub-group can switch it back on.
+        </div>
+        <CheckRow k="piguard_enabled" title="PIGuard (check 1)" sub="Scores every new message and tool result. Clean ones go straight to the model." one={one} save={save} />
+        <CheckRow k="oss_enabled" title="Second check (OSS judge)" sub="Reads what PIGuard flagged and decides to block or allow it." one={one} save={save} />
+        {!eff.piguard_enabled && !eff.oss_enabled && <div className="exc" style={{ marginTop: 10 }}>Both checks are off for {g.name}. Requests from its keys go straight to the model, so nothing is screened for prompt injection.</div>}
+        {!eff.piguard_enabled && eff.oss_enabled && <div className="note" style={{ marginTop: 10 }}>PIGuard is off, so every request with new content goes to the second check, which decides alone.</div>}
+        {eff.piguard_enabled && !eff.oss_enabled && <div className="note" style={{ marginTop: 10 }}>The second check is off, so a request PIGuard flags is handled by the &quot;if it fails or times out&quot; setting on the Guard checks page.</div>}
+      </div>
+
       <div className="grid-kpi" style={{ gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
         <div className="cell c-res" style={{ padding: 14 }}>
           <span className="lbl" style={{ margin: 0 }}>PIGuard flags at score</span>
@@ -476,9 +475,11 @@ function Guard({ one, save }: { one: One; save: Save }) {
           <span className="muted" style={{ fontSize: 12 }}>From {src.piguard_threshold.join(' + ')}</span>
         </div>
         <div className="cell c-res" style={{ padding: 14 }}>
-          <span className="lbl" style={{ margin: 0 }}>When PIGuard flags</span>
-          <span style={{ fontSize: 15, fontWeight: 700 }}>Ask the OSS check</span>
-          <span className="muted" style={{ fontSize: 12 }}>Set on Guard checks</span>
+          <span className="lbl" style={{ margin: 0 }}>{eff.piguard_enabled ? 'When PIGuard flags' : 'How requests are checked'}</span>
+          <span style={{ fontSize: 15, fontWeight: 700 }}>
+            {!eff.piguard_enabled && !eff.oss_enabled ? 'Not checked, straight to the model' : !eff.piguard_enabled ? 'Every request goes to check 2' : !eff.oss_enabled ? 'Flagged requests follow the failure setting' : 'Ask the OSS check'}
+          </span>
+          <span className="muted" style={{ fontSize: 12 }}>From the checks below and the Guard checks page</span>
         </div>
         <div className="cell c-res" style={{ padding: 14 }}>
           <span className="lbl" style={{ margin: 0 }}>Rate limit</span>
@@ -493,7 +494,7 @@ function Guard({ one, save }: { one: One; save: Save }) {
           {ownT && <button type="button" className="btn sm" onClick={() => void save('piguard_threshold', null, 'Back to the inherited score')}>Use inherited</button>}
         </div>
         <input type="range" min={0.3} max={0.95} step={0.05} value={t} onChange={(e) => setT(Number(e.target.value))} onMouseUp={() => void save('piguard_threshold', { mode: 'override', value: t }, `${g.name} flags at ${t.toFixed(2)}`)} onKeyUp={() => void save('piguard_threshold', { mode: 'override', value: t })} aria-label="PIGuard threshold" />
-        <div className="muted small">Lower catches more but sends more requests to check 2.</div>
+        <div className="muted small">{eff.piguard_enabled ? 'Lower catches more but sends more requests to check 2.' : `PIGuard is off for ${g.name}, so this score is not used until it is switched back on.`}</div>
       </div>
 
       {!isRoot && (
@@ -522,6 +523,33 @@ function Guard({ one, save }: { one: One; save: Save }) {
           <input className="inp" type="number" min={1} value={rate} onChange={(e) => setRate(e.target.value)} />
           <button type="button" className="btn sm" style={{ marginTop: 8 }} onClick={() => void save('rate_limit', rate ? { mode: 'override', value: Number(rate) } : null, 'Rate limit saved')}>Save limit</button>
         </label>
+      </div>
+    </div>
+  );
+}
+
+function CheckRow({ k, title, sub, one, save }: { k: 'piguard_enabled' | 'oss_enabled'; title: string; sub: string; one: One; save: Save }) {
+  const g = one.group;
+  const isRoot = g.parentId === null;
+  const stored = g.settings[k];
+  const cur = !stored ? 'inherit' : stored.value === true ? 'on' : 'off';
+  const effective = one.resolution.effective[k];
+  return (
+    <div className="chk">
+      <div>
+        <h3>{title}</h3>
+        <div className="sub">{sub}</div>
+        <div className="state">
+          <span className={effective ? 'pill ok' : 'pill warn'}>{effective ? 'On' : 'Off'}</span>
+          <span className="muted">for {g.name} · from {one.resolution.sources[k].join(' + ')}</span>
+        </div>
+      </div>
+      <div className="seg" role="group" aria-label={title}>
+        <button type="button" className={cur === 'inherit' ? 'on' : ''} onClick={() => void save(k, null, `${title}: ${isRoot ? 'back to the Guard checks page' : 'same as the parent group'}`)}>
+          {isRoot ? 'Guard checks page' : 'Same as parent'}
+        </button>
+        <button type="button" className={cur === 'on' ? 'on' : ''} onClick={() => void save(k, { mode: 'override', value: true }, `${title} is on for ${g.name}`)}>On</button>
+        <button type="button" className={cur === 'off' ? 'on' : ''} onClick={() => void save(k, { mode: 'override', value: false }, `${title} is off for ${g.name}`)}>Off (bypass)</button>
       </div>
     </div>
   );

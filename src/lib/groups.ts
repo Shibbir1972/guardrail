@@ -9,12 +9,12 @@ import { getSettings } from './settings';
  * A setting a group doesn't store is inherited unchanged.
  */
 export type Mode = 'set' | 'add' | 'override';
-export type SettingKey = 'servers' | 'models' | 'context' | 'piguard_threshold' | 'oss_prompt' | 'blocked_reply' | 'rate_limit';
+export type SettingKey = 'servers' | 'models' | 'context' | 'piguard_enabled' | 'piguard_threshold' | 'oss_enabled' | 'oss_prompt' | 'blocked_reply' | 'rate_limit';
 
 export interface SettingDef {
   key: SettingKey;
   label: string;
-  kind: 'list' | 'number' | 'text';
+  kind: 'list' | 'number' | 'text' | 'flag';
   canAdd: boolean;
 }
 
@@ -22,13 +22,15 @@ export const SETTING_DEFS: SettingDef[] = [
   { key: 'servers', label: 'Servers', kind: 'list', canAdd: true },
   { key: 'models', label: 'Models', kind: 'list', canAdd: true },
   { key: 'context', label: 'Context files', kind: 'list', canAdd: true },
+  { key: 'piguard_enabled', label: 'PIGuard check (check 1)', kind: 'flag', canAdd: false },
   { key: 'piguard_threshold', label: 'PIGuard flags at', kind: 'number', canAdd: false },
+  { key: 'oss_enabled', label: 'Second check (OSS)', kind: 'flag', canAdd: false },
   { key: 'oss_prompt', label: 'OSS check prompt', kind: 'text', canAdd: true },
   { key: 'blocked_reply', label: 'Blocked reply', kind: 'text', canAdd: false },
   { key: 'rate_limit', label: 'Rate limit', kind: 'number', canAdd: false },
 ];
 
-export type SettingValue = number[] | string[] | number | string | null;
+export type SettingValue = number[] | string[] | number | string | boolean | null;
 export interface StoredSetting {
   mode: Mode;
   value: SettingValue;
@@ -68,7 +70,11 @@ export interface Effective {
   /** '*' = every enabled model */
   models: string[];
   context: number[];
+  /** Is check 1 (PIGuard) on for this group? Starts from the Guard checks page; a group can turn it off or on. */
+  piguard_enabled: boolean;
   piguard_threshold: number;
+  /** Is check 2 (the judge) on for this group? Same rules as check 1. */
+  oss_enabled: boolean;
   /** Full prompt for check 2: the default plus every group's lines, in order. */
   oss_prompt: string;
   /** Just the parts groups added, with where each came from. */
@@ -84,6 +90,8 @@ export interface Resolution {
 }
 
 export interface Defaults {
+  piguard_enabled: boolean;
+  oss_enabled: boolean;
   piguard_threshold: number;
   oss_prompt: string;
   blocked_reply: string;
@@ -93,6 +101,8 @@ export interface Defaults {
 export function defaultsFromSettings(): Defaults {
   const s = getSettings();
   return {
+    piguard_enabled: s.guard.piguard.enabled,
+    oss_enabled: s.guard.oss.enabled,
     piguard_threshold: s.guard.threshold,
     oss_prompt: s.guard.oss.prompt,
     blocked_reply: s.guard.reply.template,
@@ -108,6 +118,8 @@ export function resolveLayers(layers: Layer[], defaults: Defaults): Resolution {
     servers: null,
     models: [],
     context: [],
+    piguard_enabled: defaults.piguard_enabled,
+    oss_enabled: defaults.oss_enabled,
     piguard_threshold: defaults.piguard_threshold,
     oss_prompt: defaults.oss_prompt,
     oss_prompt_parts: [],
@@ -153,6 +165,10 @@ function apply(eff: Effective, key: SettingKey, value: SettingValue, additive: b
       eff.context = additive ? uniq([...eff.context, ...v]) : v;
       break;
     }
+    case 'piguard_enabled':
+    case 'oss_enabled':
+      eff[key] = value === true;
+      break;
     case 'piguard_threshold':
     case 'rate_limit': {
       const n = Number(value);
@@ -279,6 +295,9 @@ export function normalizeSetting(key: SettingKey, s: StoredSetting, isRoot: bool
     if (!Number.isFinite(n) || n <= 0) throw new Error(`${def.label} must be a positive number.`);
     if (key === 'piguard_threshold' && n >= 1) throw new Error('The PIGuard score must be between 0 and 1.');
     value = key === 'rate_limit' ? Math.round(n) : n;
+  } else if (def.kind === 'flag') {
+    if (typeof value !== 'boolean') throw new Error(`${def.label} must be on or off.`);
+    mode = isRoot ? 'set' : 'override'; // on/off flags replace, they never add
   } else value = String(value ?? '');
   return { mode, value };
 }

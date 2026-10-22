@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { GroupTree } from '@/components/group-tree';
 import { DragEvent, useEffect, useRef, useState } from 'react';
 import { Icon, Loading, Modal, PageHead, Switch, ago, api, fmt, useAction, useApi, useToast } from '@/components/ui';
 import type { ContextFile } from '@/lib/context';
@@ -71,13 +72,15 @@ export default function ContextPage() {
         sub="Markdown files about your project, added to the top of every request. Attach them to a group and every key in it gets them; sub-groups inherit them."
         below={
           data && (
-            <div className="tabs" role="tablist" aria-label="Group" style={{ marginTop: 14 }}>
-              {data.groups.map((x) => (
-                <button key={x.id} type="button" role="tab" aria-selected={x.id === g?.id} className={x.id === g?.id ? 'on' : ''} onClick={() => setGid(x.id)}>
-                  {x.name}
-                </button>
-              ))}
-              <Link href="/groups" className="small" style={{ alignSelf: 'center', color: 'var(--muted)' }}>+ Another group</Link>
+            <div className="gpick" style={{ marginTop: 14 }}>
+              <div className="gpick-hd">
+                <span>
+                  <span className="lbl" style={{ margin: 0, display: 'inline' }}>Group </span>
+                  <b>{g?.path}</b>
+                </span>
+                <Link href="/groups" className="small" style={{ color: 'var(--muted)' }}>+ Another group</Link>
+              </div>
+              <GroupTree groups={data.groups} selectedId={g?.id ?? null} onSelect={setGid} counts={false} />
             </div>
           )
         }

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { display } from '@/components/format-setting';
+import { GroupCascade } from '@/components/group-cascade';
 import { Icon, Loading, Modal, PageHead, ago, api, copy, fmt, useAction, useApi, useToast } from '@/components/ui';
 import type { GroupSettings, Resolution } from '@/lib/groups';
 import type { ApiKey } from '@/lib/keys';
@@ -11,6 +12,7 @@ import type { ApiKey } from '@/lib/keys';
 interface GroupV {
   id: number;
   name: string;
+  parentId: number | null;
   path: string;
   depth: number;
 }
@@ -212,8 +214,8 @@ function Preview({ groupId, exceptions, look, groupName }: { groupId: number; ex
           <dt>Servers</dt><dd>{display('servers', e.servers, look)}</dd>
           <dt>Models</dt><dd className="mono">{display('models', e.models, look)}</dd>
           <dt>Context</dt><dd className="mono">{display('context', e.context, look)}</dd>
-          <dt>First check</dt><dd>PIGuard, flags at {e.piguard_threshold.toFixed(2)}</dd>
-          <dt>Second check</dt><dd>OSS check with {e.oss_prompt_parts.length ? `${e.oss_prompt_parts.map((p) => p.from).join(' + ')} lines` : 'the default prompt'}</dd>
+          <dt>First check</dt><dd>{e.piguard_enabled ? `PIGuard, flags at ${e.piguard_threshold.toFixed(2)}` : <b>Off for this group (bypassed)</b>}</dd>
+          <dt>Second check</dt><dd>{e.oss_enabled ? `OSS check with ${e.oss_prompt_parts.length ? `${e.oss_prompt_parts.map((p) => p.from).join(' + ')} lines` : 'the default prompt'}` : <b>Off for this group (bypassed)</b>}</dd>
           <dt>Rate limit</dt><dd>{e.rate_limit} per minute</dd>
         </dl>
       )}
@@ -254,12 +256,7 @@ function CreateKey({ groups, look, onCreated }: { groups: GroupV[]; look: Lookup
             <span className="num">2</span>
             <div style={{ flex: '1 1 auto', minWidth: 0 }}>
               <span className="lbl">Group</span>
-              <div className="chips" role="group" aria-label="Group">
-                {groups.map((g) => (
-                  <button key={g.id} type="button" className={g.id === groupId ? 'on' : ''} onClick={() => setGroupId(g.id)}>{g.name}</button>
-                ))}
-              </div>
-              <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>{group?.path}</div>
+              <GroupCascade groups={groups} value={group?.id ?? groupId} onChange={setGroupId} />
             </div>
           </div>
           <div className="wrap" style={{ gap: 12, alignItems: 'flex-start', flexWrap: 'nowrap' }}>
@@ -316,15 +313,13 @@ function EditKey({ k, groups, look, onClose, onDone }: { k: KeyV; groups: GroupV
   const { run, busy } = useAction();
   return (
     <Modal title={`Edit ${k.name}`} onClose={onClose} wide>
+      <div style={{ marginBottom: 16 }}>
+        <span className="lbl">Group</span>
+        <GroupCascade groups={groups} value={groupId} onChange={setGroupId} />
+      </div>
       <div className="row" style={{ gap: 16 }}>
         <label style={{ flex: '1 1 200px' }}><span className="lbl">Key name</span><input className="inp" value={name} onChange={(e) => setName(e.target.value)} /></label>
         <label style={{ flex: '1 1 200px' }}><span className="lbl">Person or bot</span><input className="inp" value={owner} onChange={(e) => setOwner(e.target.value)} /></label>
-        <label style={{ flex: '1 1 200px' }}>
-          <span className="lbl">Group</span>
-          <select className="inp" value={groupId} onChange={(e) => setGroupId(Number(e.target.value))}>
-            {groups.map((g) => <option key={g.id} value={g.id}>{g.path}</option>)}
-          </select>
-        </label>
         <label style={{ flex: '1 1 160px' }}><span className="lbl">Expiry date</span><input className="inp" type="date" value={expires} onChange={(e) => setExpires(e.target.value)} /></label>
       </div>
       <div className="row" style={{ gap: 16 }}>

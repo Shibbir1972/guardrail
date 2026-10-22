@@ -213,9 +213,15 @@ export async function handleCompletion(req: Request, kind: Kind, opts: GatewayOp
   // 5. The two guard checks. Each can be off on its own: with PIGuard off,
   // check 2 judges every request; with both off, requests go straight on.
   let outcome: Outcome = redacted ? 'redacted' : 'answered';
+  // The Guard checks page sets the default for everyone; a group (and so every key in it) can turn either
+  // check off, or on again under a group that turned it off. `eff` already holds the resolved answer.
   const g = settings.guard;
-  const c1On = g.enabled && g.piguard.enabled;
-  const c2On = g.enabled && g.oss.enabled;
+  const c1On = g.enabled && eff.piguard_enabled;
+  const c2On = g.enabled && eff.oss_enabled;
+  const groupName = groups.find((x) => x.id === key.groupId)?.name ?? 'this group';
+  const c1Bypass = g.enabled && g.piguard.enabled && !eff.piguard_enabled; // on for the app, off for this group
+  const c2Bypass = g.enabled && g.oss.enabled && !eff.oss_enabled;
+  const gc2 = { ...g, oss: { ...g.oss, enabled: c2On } }; // what check 2 sees: on or off for THIS group
   const judge = settings.guard.oss.model.split('/').pop();
   let toCheck2 = false;
   let c1Flagged = false;
@@ -239,14 +245,16 @@ export async function handleCompletion(req: Request, kind: Kind, opts: GatewayOp
     toCheck2 = c2On && segments.length > 0;
     steps.push({
       tone: 'neutral',
-      head: 'Check 1 · PIGuard is off',
+      head: c1Bypass ? `Check 1 · PIGuard is off for ${groupName}` : 'Check 1 · PIGuard is off',
       ms: at(),
       text: !c2On ? 'Check 2 is off too, so no guard check ran.' : toCheck2 ? `Sent straight to check 2 (${judge}).` : 'Nothing new to scan, so check 2 was skipped.',
     });
   }
 
+  if (c2Bypass && c1On)
+    steps.push({ tone: 'neutral', head: `Check 2 · off for ${groupName}`, ms: at(), text: toCheck2 ? 'This group skips the second check, so the "if it fails or times out" setting decides what happens to a flagged request.' : 'This group skips the second check.' });
   if (toCheck2) {
-    const c2 = await runCheck2(segments, c1Quote ?? escHit?.match ?? null, eff.oss_prompt, g);
+    const c2 = await runCheck2(segments, c1Quote ?? escHit?.match ?? null, eff.oss_prompt, gc2);
     stages.oss = c2.ms;
     log.c2_status = c2.error ? (c2.verdict === 'block' ? 'error' : 'allow') : c2.verdict;
     log.c2_reason = c2.reason;

@@ -39,7 +39,7 @@ Everything is under `/api/admin/` and returns JSON. Failures come back as `{"err
 | DELETE | `limits/:id` | |
 | GET / POST | `groups` | Tree with resolved settings, or `{name, parentId, description}` to create a group |
 | GET / PATCH / DELETE | `groups/:id` | Read (with resolution matrix), rename or move, or delete |
-| PUT | `groups/:id/settings` | `{key, setting: {mode, value}}`, or `{key, setting: null}` to inherit again |
+| PUT | `groups/:id/settings` | `{key, setting: {mode, value}}`, or `{key, setting: null}` to inherit again. Keys: `servers`, `models`, `context`, `piguard_enabled`, `piguard_threshold`, `oss_enabled`, `oss_prompt`, `blocked_reply`, `rate_limit`. `piguard_enabled` and `oss_enabled` take `true` or `false` and let one group bypass a check |
 | GET / POST | `keys` | List keys, or create one (the response includes the secret, once) |
 | POST | `keys/preview` | Effective settings for `{groupId, exceptions}` before creating a key |
 | GET / PATCH / DELETE | `keys/:id` | Read, edit (group, exceptions, expiry, revoke), or delete |

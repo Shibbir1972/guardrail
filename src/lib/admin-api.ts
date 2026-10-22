@@ -219,11 +219,12 @@ const routes: Record<string, Handler> = {
     const segments = [{ source: (body.source === 'tool' ? 'tool result' : 'user message') as 'tool result' | 'user message', text: String(body.text ?? '') }];
     const c1 = await runCheck1(segments, s.guard);
     const flagged = c1.score >= eff.piguard_threshold;
-    // Same routing as the gateway: with PIGuard off, check 2 judges everything (if it is on).
-    const c1On = s.guard.piguard.enabled;
-    const toCheck2 = c1On ? flagged : s.guard.oss.enabled;
-    const c2 = toCheck2 ? await runCheck2(segments, c1On ? c1.quote : null, eff.oss_prompt, s.guard) : null;
-    return { threshold: eff.piguard_threshold, c1, c1On, c2On: s.guard.oss.enabled, flagged, c2, builtin: builtinScore(segments) };
+    // Same routing as the gateway, for the chosen group: with PIGuard off, check 2 judges everything (if it is on).
+    const c1On = s.guard.enabled && eff.piguard_enabled;
+    const c2On = s.guard.enabled && eff.oss_enabled;
+    const toCheck2 = c1On ? flagged : c2On;
+    const c2 = toCheck2 ? await runCheck2(segments, c1On ? c1.quote : null, eff.oss_prompt, { ...s.guard, oss: { ...s.guard.oss, enabled: c2On } }) : null;
+    return { threshold: eff.piguard_threshold, c1, c1On, c2On, flagged, c2, builtin: builtinScore(segments) };
   },
 
   // ---- activity ----
