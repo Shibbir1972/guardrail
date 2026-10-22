@@ -124,7 +124,9 @@ CREATE TABLE IF NOT EXISTS request_logs (
   tokens_out INTEGER,
   stages TEXT NOT NULL DEFAULT '{}',            -- { stage: ms }
   steps TEXT NOT NULL DEFAULT '[]',             -- timeline for the "Why?" panel
-  feedback TEXT
+  feedback TEXT,
+  prompt TEXT,                                  -- messages as the client sent them (JSON)
+  forwarded TEXT                                -- messages as sent to the model, after redaction and context (JSON)
 );
 CREATE INDEX IF NOT EXISTS idx_logs_ts ON request_logs(ts);
 CREATE INDEX IF NOT EXISTS idx_logs_outcome ON request_logs(outcome, ts);
@@ -141,6 +143,7 @@ export function openDb(file = dbPath()): Database.Database {
   db.pragma('foreign_keys = ON');
   db.pragma('busy_timeout = 5000');
   db.exec(SCHEMA);
+  migrate(db);
   bootstrap(db);
   return db;
 }
@@ -153,6 +156,12 @@ export function getDb(): Database.Database {
 /** Test hook: swap the process-wide connection. */
 export function setDb(db: Database.Database) {
   g.__grDb = db;
+}
+
+// Columns added after the first release; CREATE TABLE IF NOT EXISTS skips them on old databases.
+function migrate(db: Database.Database) {
+  const have = new Set((db.prepare('PRAGMA table_info(request_logs)').all() as { name: string }[]).map((c) => c.name));
+  for (const col of ['prompt', 'forwarded']) if (!have.has(col)) db.exec(`ALTER TABLE request_logs ADD COLUMN ${col} TEXT`);
 }
 
 // A fresh install gets one root group so keys can be created right away.

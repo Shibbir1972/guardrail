@@ -11,6 +11,7 @@ import { createFile } from '@/lib/context';
 import { updateSettings } from '@/lib/settings';
 import { resetRateLimits } from '@/lib/limits';
 import { handleCompletion, handleModels, type Trace } from '@/lib/gateway';
+import { getLog } from '@/lib/logs';
 
 const PORT = 18000 + Math.floor(Math.random() * 1000);
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -93,6 +94,16 @@ describe('gateway', () => {
     expect(log.server).toBe('spark-01');
   });
 
+  it('keeps the prompt as sent and as forwarded for the Activity page', async () => {
+    const sent = [{ role: 'system', content: 'You are Cline.' }, { role: 'user', content: 'rename the helper' }];
+    await chat(secret, { model: 'qwen3-coder-30b', messages: sent });
+    const full = getLog(String(lastLog().id))!;
+    expect(full.prompt).toEqual(sent);
+    expect(full.forwarded).toHaveLength(2);
+    expect(String(full.forwarded![0].content)).toContain('House rules');
+    expect(full.forwarded![1]).toEqual(sent[1]);
+  });
+
   it('streams a clean request through', async () => {
     const res = await chat(secret, { model: 'qwen3-coder-30b', stream: true, messages: [{ role: 'user', content: 'hi' }] });
     const body = await res.text();
@@ -118,6 +129,9 @@ describe('gateway', () => {
       .map((e) => JSON.parse(e).choices[0].delta.content ?? '')
       .join('');
     expect(text).toContain('GuardRail stopped this request');
+    const blocked = getLog(String(lastLog().id))!;
+    expect(blocked.prompt).toHaveLength(3);
+    expect(blocked.forwarded).toBeNull();
     const log = lastLog();
     expect(log.outcome).toBe('blocked');
     expect(log.c1_status).toBe('flagged');

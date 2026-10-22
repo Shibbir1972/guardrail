@@ -3,7 +3,7 @@ import { contentText, newSegments, renderBlocked, runCheck1, runCheck2, Segment 
 import { chainOf, groupPath, listGroups, resolveGroup, Effective } from './groups';
 import { ApiKey, checkKey, lookupKey, touchKey } from './keys';
 import { groupAllowed, limitsFor, listLimits, takeToken } from './limits';
-import { LogEntry, Outcome, Step, newRequestId, updateLog, writeLog } from './logs';
+import { LogEntry, Outcome, Step, newRequestId, promptForLog, updateLog, writeLog } from './logs';
 import { countHit, matchRules, redactMessages } from './rules';
 import { detectSchema, schemaForPath } from './schemas';
 import { getDb } from './db';
@@ -61,6 +61,13 @@ export function injectContext(messages: Msg[], block: string, placement: 'top' |
     return [{ ...first, content }, ...messages.slice(1)];
   }
   return [{ role: 'system', content: block }, ...messages];
+}
+
+/** A completions prompt (string or list of strings) as messages, so the log can show it like chat. */
+function promptMessages(prompt: unknown): Msg[] | undefined {
+  if (prompt === undefined || prompt === null) return undefined;
+  const text = typeof prompt === 'string' ? prompt : Array.isArray(prompt) ? prompt.map((p) => (typeof p === 'string' ? p : JSON.stringify(p))).join('\n') : JSON.stringify(prompt);
+  return [{ role: 'user', content: text }];
 }
 
 /** Which models a key may call, by name, with the servers that serve each. */
@@ -132,6 +139,7 @@ export async function handleCompletion(req: Request, kind: Kind, opts: GatewayOp
     return apiError(400, 'Request body is not valid JSON.', 'invalid_request_error', id);
   }
   log.model = typeof body.model === 'string' ? body.model : null;
+  log.prompt = promptForLog(kind === 'chat' ? body.messages : promptMessages(body.prompt));
   const det = detectSchema(body, path, req.headers);
   const expected = schemaForPath(path)!;
   log.schema = det.best.id;
@@ -249,6 +257,7 @@ export async function handleCompletion(req: Request, kind: Kind, opts: GatewayOp
   else body.prompt = contentText(messages[0].content);
   stages.context = lap();
   trace.forwarded = body;
+  log.forwarded = promptForLog(kind === 'chat' ? body.messages : promptMessages(body.prompt));
 
   // 7. Forward to vLLM, failing over between servers
   for (const r of routes) {

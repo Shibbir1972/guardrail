@@ -20,9 +20,13 @@ When a request is blocked, the agent receives a normal streamed assistant messag
 | **Context files** | A library of `.md` files with version history. Each group chooses which files to include and in what order. The policy prompt and placement are set here (top of the system message for caching, or just before the last user message). |
 | **Guard checks** | Check 1 is PIGuard, run through vLLM's `/classify`, with built-in patterns as a fallback. Check 2 is the OSS judge, which runs only on flagged requests. You pick a provider server for each check or add one inline. This page also edits the blocked-reply template and has a live tester. |
 | **Studio** | A test bench. Choose a key (or paste one), a schema (OpenAI chat like Cline, legacy completions, Anthropic, Responses, Ollama, Gemini) and a scenario, then send. You see the reply as the agent would, each step GuardRail took, which context files it added and the exact request the model received. |
-| **Activity** | Every request is logged with its outcome, stage timings and a step-by-step **Why?** timeline. You can filter, search, export to CSV, and mark false alarms. |
+| **Activity** | Every request is logged with its outcome, stage timings and a step-by-step **Why?** timeline. Click any row to open it: **Prompt** shows every message the client sent (system prompt, user turns, tool calls and results), and **Sent to model** shows what reached vLLM, with the messages GuardRail added or changed (context, redaction) highlighted. You can filter, search, export to CSV, and mark false alarms. |
 | **Custom rules** | WHEN/THEN rules that run before the guard. They match text or a regex in a chosen part of the request, can be scoped to a group, and can block, redact or escalate to check 2. |
 | **Schemas** | Detects which API shape a request uses (OpenAI chat or completions, Responses, Anthropic, Ollama, Gemini). In strict mode a body that doesn't match its path is rejected with a 422. |
+
+![Prompt viewer in Activity](docs/screenshots/activity-prompt.png)
+
+Prompts are stored in the log database. Each message's text is capped at 200,000 characters, so a request that resends whole files cannot make one row huge. Treat the database as sensitive: it holds whatever your users and their agents send.
 
 More screenshots are in [`docs/screenshots`](docs/screenshots). The original design mockup is in [`docs/mockup`](docs/mockup).
 
