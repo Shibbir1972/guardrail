@@ -5,6 +5,7 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Icon, Loading, PageHead, api, clock, fmt, ms, useAction, useApi } from '@/components/ui';
 import { Timeline } from '@/components/timeline';
+import { PromptView, diffMarks } from '@/components/prompt-view';
 import type { LogEntry } from '@/lib/logs';
 
 interface Logs {
@@ -118,7 +119,7 @@ function Activity() {
                     </thead>
                     <tbody>
                       {rows.map((r) => (
-                        <tr key={r.id} className={detail?.id === r.id ? 'sel' : ''}>
+                        <tr key={r.id} className={`click${detail?.id === r.id ? ' sel' : ''}`} onClick={() => setSel(r.id)}>
                           <td className="mono">{clock(r.ts)}</td>
                           <td>
                             <div style={{ fontWeight: 600 }}>{r.owner ?? 'unknown'}</div>
@@ -136,8 +137,8 @@ function Activity() {
                             <Outcome r={r} />
                           </td>
                           <td>
-                            <button type="button" className="btn sm" onClick={() => setSel(r.id)}>
-                              Why?
+                            <button type="button" className="btn sm" onClick={(e) => (e.stopPropagation(), setSel(r.id))}>
+                              Details
                             </button>
                           </td>
                         </tr>
@@ -200,8 +201,24 @@ const FEEDBACK: Record<string, [string, string]> = {
   redacted: ['missed_attack', 'Report a missed attack'],
 };
 
+type Tab = 'steps' | 'prompt' | 'sent';
+
 function Detail({ d, onFeedback }: { d: LogEntry; onFeedback: () => void }) {
   const { run } = useAction();
+  const [tab, setTab] = useState<Tab>('steps');
+  // Lists leave the prompts out; fetch them for the open request.
+  const [full, setFull] = useState<LogEntry | null>(null);
+  useEffect(() => {
+    let live = true;
+    api<LogEntry>(`logs/${d.id}`)
+      .then((l) => live && setFull(l))
+      .catch(() => live && setFull(null));
+    return () => {
+      live = false;
+    };
+  }, [d.id]);
+  const prompts = full?.id === d.id ? full : null;
+  const sentMarks = useMemo(() => (prompts?.forwarded ? diffMarks(prompts.forwarded, prompts.prompt) : []), [prompts]);
   const [label, cls] = OUT[d.outcome] ?? [d.outcome, ''];
   const fb = FEEDBACK[d.outcome];
   return (
@@ -215,7 +232,32 @@ function Detail({ d, onFeedback }: { d: LogEntry; onFeedback: () => void }) {
         </div>
         <span className={`pill ${cls}`}>{label}</span>
       </div>
-      <Timeline steps={d.steps} />
+      <div className="tabs line" role="tablist" aria-label="Request view">
+        {(
+          [
+            ['steps', 'What happened'],
+            ['prompt', 'Prompt'],
+            ['sent', 'Sent to model'],
+          ] as const
+        ).map(([id, name]) => (
+          <button key={id} type="button" role="tab" aria-selected={tab === id} className={tab === id ? 'on' : ''} onClick={() => setTab(id)}>
+            {name}
+            {id === 'prompt' && prompts?.prompt ? ` (${prompts.prompt.length})` : ''}
+          </button>
+        ))}
+      </div>
+      {tab === 'steps' && <Timeline steps={d.steps} />}
+      {tab !== 'steps' &&
+        (!prompts ? (
+          <Loading />
+        ) : tab === 'prompt' ? (
+          <PromptView messages={prompts.prompt} empty="No prompt was recorded. The request was rejected before its body was read, or it was logged before prompts were kept." />
+        ) : (
+          <>
+            {prompts.forwarded && sentMarks.some(Boolean) && <div className="muted small">Highlighted messages were added or changed by GuardRail (context injection or redaction).</div>}
+            <PromptView messages={prompts.forwarded} marks={sentMarks} empty="Nothing was sent to the model: the request was rejected or blocked first." />
+          </>
+        ))}
       <div className="muted small">
         {[d.schema && `Schema ${d.schema}`, d.server && `Server ${d.server}`, d.latency_ms !== null && `Total ${ms(d.latency_ms)}`, d.tokens_out && `${fmt(d.tokens_out)} tokens out`].filter(Boolean).join(' · ')}
       </div>

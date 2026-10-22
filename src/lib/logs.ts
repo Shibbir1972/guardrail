@@ -12,6 +12,13 @@ export interface Step {
   why?: string;
 }
 
+/** One message of a logged prompt. Completions requests are stored as a single user message. */
+export interface PromptMessage {
+  role?: string;
+  content?: unknown;
+  [k: string]: unknown;
+}
+
 export interface LogEntry {
   id: string;
   ts: number;
@@ -37,16 +44,44 @@ export interface LogEntry {
   stages: Record<string, number>;
   steps: Step[];
   feedback: string | null;
+  /** Only filled by getLog; lists leave the prompts out to stay small. */
+  prompt?: PromptMessage[] | null;
+  forwarded?: PromptMessage[] | null;
 }
 
-type Row = Omit<LogEntry, 'stages' | 'steps'> & { stages: string; steps: string };
+type Row = Omit<LogEntry, 'stages' | 'steps' | 'prompt' | 'forwarded'> & { stages: string; steps: string; prompt?: string | null; forwarded?: string | null };
+
+/** Longest text kept per message. Agents resend whole files, so this caps how big one log row can get. */
+export const PROMPT_TEXT_LIMIT = 200_000;
+
+function capText(s: string) {
+  return s.length > PROMPT_TEXT_LIMIT ? `${s.slice(0, PROMPT_TEXT_LIMIT)}\n\n[GuardRail: cut ${(s.length - PROMPT_TEXT_LIMIT).toLocaleString('en')} more characters from this log]` : s;
+}
+
+/** Copy of the messages that is safe to store: long text is cut. */
+export function promptForLog(messages: unknown): PromptMessage[] | null {
+  if (!Array.isArray(messages)) return null;
+  return messages.map((m) => {
+    if (!m || typeof m !== 'object') return { content: capText(String(m)) };
+    const msg = { ...(m as PromptMessage) };
+    if (typeof msg.content === 'string') msg.content = capText(msg.content);
+    else if (Array.isArray(msg.content))
+      msg.content = msg.content.map((p) => (p && typeof p === 'object' && typeof (p as { text?: unknown }).text === 'string' ? { ...p, text: capText((p as { text: string }).text) } : p));
+    return msg;
+  });
+}
+
+const jsonOrNull = (v: unknown) => (v === undefined || v === null ? null : JSON.stringify(v));
 
 export const newRequestId = () => 'req_' + crypto.randomBytes(6).toString('hex');
 
-const COLS = ['id', 'ts', 'key_id', 'key_name', 'owner', 'group_id', 'group_name', 'ip', 'path', 'schema', 'model', 'server', 'c1_score', 'c1_status', 'c2_status', 'c2_reason', 'outcome', 'status_code', 'reason', 'latency_ms', 'tokens_out', 'stages', 'steps', 'feedback'] as const;
+const COLS = ['id', 'ts', 'key_id', 'key_name', 'owner', 'group_id', 'group_name', 'ip', 'path', 'schema', 'model', 'server', 'c1_score', 'c1_status', 'c2_status', 'c2_reason', 'outcome', 'status_code', 'reason', 'latency_ms', 'tokens_out', 'stages', 'steps', 'feedback', 'prompt', 'forwarded'] as const;
+const JSON_COLS = ['stages', 'steps', 'prompt', 'forwarded'];
+// Everything but the prompts, for lists.
+const LIST_COLS = COLS.filter((c) => c !== 'prompt' && c !== 'forwarded').join(', ');
 
 export function writeLog(e: Partial<LogEntry> & { id: string; ts: number; outcome: Outcome }) {
-  const row: Record<string, unknown> = { ...e, stages: JSON.stringify(e.stages ?? {}), steps: JSON.stringify(e.steps ?? []) };
+  const row: Record<string, unknown> = { ...e, stages: JSON.stringify(e.stages ?? {}), steps: JSON.stringify(e.steps ?? []), prompt: jsonOrNull(e.prompt), forwarded: jsonOrNull(e.forwarded) };
   getDb()
     .prepare(`INSERT OR REPLACE INTO request_logs (${COLS.join(', ')}) VALUES (${COLS.map((c) => '@' + c).join(', ')})`)
     .run(Object.fromEntries(COLS.map((c) => [c, row[c] ?? null])));
@@ -58,14 +93,21 @@ export function updateLog(id: string, patch: Partial<LogEntry>) {
   for (const [k, v] of Object.entries(patch)) {
     if (!(COLS as readonly string[]).includes(k) || k === 'id') continue;
     sets.push(`${k} = @${k}`);
-    vals[k] = k === 'stages' || k === 'steps' ? JSON.stringify(v) : v;
+    vals[k] = JSON_COLS.includes(k) ? jsonOrNull(v) : v;
   }
   if (sets.length) getDb().prepare(`UPDATE request_logs SET ${sets.join(', ')} WHERE id = @id`).run(vals);
 }
 
-const parse = (r: Row): LogEntry => ({ ...r, stages: safeJson(r.stages, {}), steps: safeJson(r.steps, []) });
+const parse = (r: Row): LogEntry => {
+  const { prompt, forwarded, ...rest } = r;
+  const e: LogEntry = { ...rest, stages: safeJson(r.stages, {}), steps: safeJson(r.steps, []) };
+  if ('prompt' in r) e.prompt = safeJson(prompt, null);
+  if ('forwarded' in r) e.forwarded = safeJson(forwarded, null);
+  return e;
+};
 
-function safeJson<T>(s: string, d: T): T {
+function safeJson<T>(s: string | null | undefined, d: T): T {
+  if (s === null || s === undefined) return d;
   try {
     return JSON.parse(s) as T;
   } catch {
@@ -106,7 +148,7 @@ export function queryLogs(opts: { filter?: string; q?: string; limit?: number; b
     where.push('ts >= ?');
     args.push(opts.since);
   }
-  const sql = `SELECT * FROM request_logs ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY ts DESC LIMIT ?`;
+  const sql = `SELECT ${LIST_COLS} FROM request_logs ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY ts DESC LIMIT ?`;
   args.push(Math.min(opts.limit ?? 100, 5000));
   return (getDb().prepare(sql).all(...args) as Row[]).map(parse);
 }
