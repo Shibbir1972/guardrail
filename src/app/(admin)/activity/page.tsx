@@ -203,6 +203,17 @@ const FEEDBACK: Record<string, [string, string]> = {
 
 type Tab = 'steps' | 'prompt' | 'sent';
 
+const EXPIRED = 'This prompt was deleted. Prompt files are kept for 20 days by default (GUARDRAIL_PROMPT_RETENTION_DAYS).';
+
+function PromptFile({ d }: { d: LogEntry }) {
+  if (!d.prompt_file || d.prompt_expired) return null;
+  return (
+    <div className="muted small">
+      Prompt file <span className="mono">{d.prompt_file}</span> in the gateway&apos;s prompts folder (<span className="mono">data/prompts</span> by default)
+    </div>
+  );
+}
+
 function Detail({ d, onFeedback }: { d: LogEntry; onFeedback: () => void }) {
   const { run } = useAction();
   const [tab, setTab] = useState<Tab>('steps');
@@ -251,11 +262,15 @@ function Detail({ d, onFeedback }: { d: LogEntry; onFeedback: () => void }) {
         (!prompts ? (
           <Loading />
         ) : tab === 'prompt' ? (
-          <PromptView messages={prompts.prompt} empty="No prompt was recorded. The request was rejected before its body was read, or it was logged before prompts were kept." />
+          <>
+            <PromptView messages={prompts.prompt} empty={prompts.prompt_expired ? EXPIRED : 'No prompt was recorded. The request was rejected before its body was read.'} />
+            <PromptFile d={prompts} />
+          </>
         ) : (
           <>
             {prompts.forwarded && sentMarks.some(Boolean) && <div className="muted small">Highlighted messages were added or changed by GuardRail (context injection or redaction).</div>}
-            <PromptView messages={prompts.forwarded} marks={sentMarks} empty="Nothing was sent to the model: the request was rejected or blocked first." />
+            <PromptView messages={prompts.forwarded} marks={sentMarks} empty={prompts.prompt_expired ? EXPIRED : 'Nothing was sent to the model: the request was rejected or blocked first.'} />
+            <PromptFile d={prompts} />
           </>
         ))}
       <div className="muted small">

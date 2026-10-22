@@ -1,6 +1,8 @@
 // End-to-end gateway tests: an in-memory database and a mock vLLM server
 // (scripts/mock-vllm.mjs) that serves a coder model, PIGuard and the judge.
 import { spawn, type ChildProcess } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { openDb, setDb, getDb } from '@/lib/db';
@@ -11,7 +13,10 @@ import { createFile } from '@/lib/context';
 import { updateSettings } from '@/lib/settings';
 import { resetRateLimits } from '@/lib/limits';
 import { handleCompletion, handleModels, type Trace } from '@/lib/gateway';
-import { getLog } from '@/lib/logs';
+import { getLog, prunePrompts } from '@/lib/logs';
+import { promptsDir } from '@/lib/prompt-files';
+
+process.env.GUARDRAIL_PROMPTS_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'gr-prompts-'));
 
 const PORT = 18000 + Math.floor(Math.random() * 1000);
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -65,6 +70,7 @@ beforeAll(async () => {
 
 afterAll(() => {
   mock?.kill();
+  fs.rmSync(promptsDir(), { recursive: true, force: true });
 });
 
 describe('gateway', () => {
@@ -94,14 +100,41 @@ describe('gateway', () => {
     expect(log.server).toBe('spark-01');
   });
 
-  it('keeps the prompt as sent and as forwarded for the Activity page', async () => {
+  it('writes the prompt to a Markdown file and keeps only its path in the database', async () => {
     const sent = [{ role: 'system', content: 'You are Cline.' }, { role: 'user', content: 'rename the helper' }];
     await chat(secret, { model: 'qwen3-coder-30b', messages: sent });
-    const full = getLog(String(lastLog().id))!;
+    const row = lastLog();
+    expect(row.prompt_file).toMatch(/^\d{4}-\d{2}-\d{2}\/req_[0-9a-f]+\.md$/);
+    const md = fs.readFileSync(path.join(promptsDir(), String(row.prompt_file)), 'utf8');
+    expect(md).toContain(`# Request ${row.id}`);
+    expect(md).toContain('rename the helper');
+    const full = getLog(String(row.id))!;
     expect(full.prompt).toEqual(sent);
     expect(full.forwarded).toHaveLength(2);
     expect(String(full.forwarded![0].content)).toContain('House rules');
     expect(full.forwarded![1]).toEqual(sent[1]);
+  });
+
+  it('updates the file of a streamed request up to date when the stream ends', async () => {
+    const res = await chat(secret, { model: 'qwen3-coder-30b', stream: true, messages: [{ role: 'user', content: 'stream it' }] });
+    await res.text();
+    const md = fs.readFileSync(path.join(promptsDir(), String(lastLog().prompt_file)), 'utf8');
+    expect(md).toMatch(/Sent to the model · spark-01, answered/);
+  });
+
+  it('deletes prompt files after the retention period', async () => {
+    await chat(secret, { model: 'qwen3-coder-30b', messages: [{ role: 'user', content: 'old turn' }] });
+    const row = lastLog();
+    const file = path.join(promptsDir(), String(row.prompt_file));
+    expect(prunePrompts()).toBe(0);
+    expect(fs.existsSync(file)).toBe(true);
+    // 21 days later the file and its path are gone; the log row stays.
+    prunePrompts(Date.now() + 21 * 86400_000);
+    expect(fs.existsSync(file)).toBe(false);
+    const after = getLog(String(row.id))!;
+    expect(after.prompt_file).toBeNull();
+    expect(after.prompt).toBeNull();
+    expect(after.outcome).toBe('answered');
   });
 
   it('streams a clean request through', async () => {

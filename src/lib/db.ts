@@ -125,8 +125,7 @@ CREATE TABLE IF NOT EXISTS request_logs (
   stages TEXT NOT NULL DEFAULT '{}',            -- { stage: ms }
   steps TEXT NOT NULL DEFAULT '[]',             -- timeline for the "Why?" panel
   feedback TEXT,
-  prompt TEXT,                                  -- messages as the client sent them (JSON)
-  forwarded TEXT                                -- messages as sent to the model, after redaction and context (JSON)
+  prompt_file TEXT                              -- Markdown file with the full prompt, relative to the prompts folder
 );
 CREATE INDEX IF NOT EXISTS idx_logs_ts ON request_logs(ts);
 CREATE INDEX IF NOT EXISTS idx_logs_outcome ON request_logs(outcome, ts);
@@ -161,7 +160,7 @@ export function setDb(db: Database.Database) {
 // Columns added after the first release; CREATE TABLE IF NOT EXISTS skips them on old databases.
 function migrate(db: Database.Database) {
   const have = new Set((db.prepare('PRAGMA table_info(request_logs)').all() as { name: string }[]).map((c) => c.name));
-  for (const col of ['prompt', 'forwarded']) if (!have.has(col)) db.exec(`ALTER TABLE request_logs ADD COLUMN ${col} TEXT`);
+  if (!have.has('prompt_file')) db.exec('ALTER TABLE request_logs ADD COLUMN prompt_file TEXT');
 }
 
 // A fresh install gets one root group so keys can be created right away.

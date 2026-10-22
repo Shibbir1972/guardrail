@@ -26,7 +26,7 @@ When a request is blocked, the agent receives a normal streamed assistant messag
 
 ![Prompt viewer in Activity](docs/screenshots/activity-prompt.png)
 
-Prompts are stored in the log database. Each message's text is capped at 200,000 characters, so a request that resends whole files cannot make one row huge. Treat the database as sensitive: it holds whatever your users and their agents send.
+Full prompts are kept on disk, not in the database. Each request gets one Markdown file, `data/prompts/<YYYY-MM-DD>/<request id>.md`, holding a summary table, every message as the client sent it, every message as sent to the model, and the steps GuardRail took. The log row stores only that file's path, and the Activity page reads the file when you open a request. Files older than 20 days are deleted automatically (checked at most once an hour), while the log rows themselves stay. Change the folder with `GUARDRAIL_PROMPTS_DIR` and the period with `GUARDRAIL_PROMPT_RETENTION_DAYS`. Treat the folder as sensitive: it holds whatever your users and their agents send.
 
 More screenshots are in [`docs/screenshots`](docs/screenshots). The original design mockup is in [`docs/mockup`](docs/mockup).
 

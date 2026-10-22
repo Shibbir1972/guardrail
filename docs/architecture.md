@@ -77,7 +77,7 @@ How a setting is resolved:
 | `limits` | scope `global` / `server` / `model`, rate limit, allowed groups |
 | `rules` | custom WHEN/THEN rules |
 | `settings` | one JSON document of global settings (`src/lib/settings.ts`) |
-| `request_logs` | one row per request with outcome, check results, `stages` and `steps` JSON, feedback, and the `prompt` and `forwarded` messages as JSON |
+| `request_logs` | one row per request with outcome, check results, `stages` and `steps` JSON, feedback, and `prompt_file`: the path of the request's Markdown file under `data/prompts`, which holds the full prompt and is deleted after 20 days |
 
 ## Admin auth
 

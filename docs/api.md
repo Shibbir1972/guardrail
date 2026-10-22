@@ -50,7 +50,7 @@ Everything is under `/api/admin/` and returns JSON. Failures come back as `{"err
 | POST | `guard/test` | `{text, source: "user" or "tool", groupId}` runs both checks without logging |
 | GET | `overview?range=1h\|24h\|7d\|30d` | Dashboard numbers |
 | GET | `logs?filter=&q=&limit=&before=` | Activity rows (without the prompts) |
-| GET / PATCH | `logs/:id` | One entry including `prompt` (messages as the client sent them) and `forwarded` (as sent to the model, `null` if it never got there), or `{feedback}` to mark a false alarm |
+| GET / PATCH | `logs/:id` | One entry including `prompt_file`, plus `prompt` (messages as the client sent them) and `forwarded` (as sent to the model, `null` if it never got there) read from that file; `prompt_expired` is true once the file has been deleted, or `{feedback}` to mark a false alarm |
 | GET / POST | `rules` | Custom rules |
 | PATCH / DELETE | `rules/:id` | |
 | GET | `studio` | Keys (with the models each may use) and schemas for the Studio page |
