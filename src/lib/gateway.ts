@@ -1,3 +1,4 @@
+import { EarlyStream } from './early-stream';
 import { StreamCollector, responseFromJson } from './stream-collect';
 import { cacheOf } from './adapters';
 import { buildContextBlock, estimateTokens, filesByIds } from './context';
@@ -133,7 +134,21 @@ export function nonStreaming(b: Record<string, unknown>): Record<string, unknown
   return rest;
 }
 
+/**
+ * A chat request. For a streaming client that goes through guard layers, the reply stream is opened before the
+ * layers have finished (see early-stream.ts) and the waiting is shown as thinking; everything else is answered
+ * as soon as the result is known.
+ */
 export async function handleCompletion(req: Request, kind: Kind, opts: GatewayOptions = {}): Promise<Response> {
+  const early = kind === 'chat' && !opts.source ? new EarlyStream() : null;
+  const result = run(req, kind, opts, early);
+  if (!early) return result;
+  const first = await Promise.race([result.then((r) => ({ r })), early.opened.then(() => null)]);
+  if (first) return first.r;
+  return early.response(result);
+}
+
+async function run(req: Request, kind: Kind, opts: GatewayOptions, early: EarlyStream | null): Promise<Response> {
   const id = newRequestId();
   const trace = opts.trace ?? {};
   trace.requestId = id;
@@ -239,7 +254,7 @@ export async function handleCompletion(req: Request, kind: Kind, opts: GatewayOp
     const text = renderBlocked(eff.blocked_reply, reason, id, settings.guard.reply.includeReason);
     steps.push({ tone: 'bad', head: `Blocked reply ${stream ? 'streamed' : 'sent'} to the client`, ms: at(), text: 'The model was never called. The client was shown:', quote: text });
     finish('blocked', 200, reason, { ...extra, response: { message: { role: 'assistant', content: text }, finish_reason: 'stop', blocked: true } });
-    return blockedResponse({ stream, model, text, requestId: id, kind });
+    return blockedResponse({ stream, model, text, requestId: id, kind, roleSent: !!early?.active });
   };
 
   stages.access = lap();
@@ -290,6 +305,11 @@ export async function handleCompletion(req: Request, kind: Kind, opts: GatewayOp
   const stickyKey = `${routes[0].server.id}::${model}`;
   if (suffixOn && onOpenRouter && !body.provider && lastProvider.get(stickyKey)) body.provider = { order: [lastProvider.get(stickyKey)], allow_fallbacks: true };
   const conversation = suffixOn ? { body: { ...body, model, messages: forwardMessages(messages) }, model, serverId: routes[0].server.id } : null;
+  if (early && stream && kind === 'chat' && (layers.some((l) => layerOn(l, eff)) || outLayers.length > 0)) {
+    early.open({ id, model });
+    early.onCancel = (sec, phase) => steps.push({ tone: 'warn', head: 'Client stopped waiting', ms: at(), text: `The client closed the connection ${sec} s after the reply stream opened, while the gateway was ${phase}.` });
+    early.status('Security check: reading your request…', 'checking the request');
+  }
   const pipe = await runPipeline({
     conversation,
     onLayer: emit ? (e) => emit({ type: 'layer', ...e, stage: 'input' }) : undefined,
@@ -352,6 +372,7 @@ export async function handleCompletion(req: Request, kind: Kind, opts: GatewayOp
     } else steps.push({ tone: 'warn', head: `Router picked ${to}, kept ${model}`, ms: at(), text: `${pipe.route.layer} picked ${to}, but this key's group may not use it, so the request stays on ${model}.` });
   }
 
+  if (early?.active) early.status('Request approved. Asking the model…', 'waiting for the model');
   // 6. Project context
   lap();
   trace.context = files.map((f) => ({ name: f.name, tokens: estimateTokens(f.body) }));
@@ -378,8 +399,8 @@ export async function handleCompletion(req: Request, kind: Kind, opts: GatewayOp
   if (outLayers.length) {
     // For a streaming client the model is streamed internally: its thinking (reasoning) is passed on to the client
     // right away, because it is never executed. The answer text and tool calls are held until the checks pass.
-    let live: ((text: string) => void) | null = null;
-    let roleSent = false;
+    let live: ((text: string) => void) | null = early?.active ? (t) => early.think(t) : null;
+    let roleSent = !!early?.active;
     const callOnce = async (b: Record<string, unknown>): Promise<Record<string, unknown> | Response> => {
       for (const r of routes) {
         const t0 = at();
@@ -432,6 +453,11 @@ export async function handleCompletion(req: Request, kind: Kind, opts: GatewayOp
       const outResults: LayerResult[] = [];
       let retryNote = '';
       for (let attempt = 1; ; attempt++) {
+        if (early?.cancelled) {
+          finish('error', 499, 'Client went away');
+          return new Response(null, { status: 499 });
+        }
+        if (attempt > 1) early?.status('', 'asking the model again');
         emit?.({ type: 'model', attempt, model });
         if (attempt > 1 && live) live(`\n\n[Security check: the previous answer was rejected (${retryNote}). Asking the model again.]\n\n`);
         const json = await callOnce({ ...body, messages: msgs });
@@ -444,6 +470,11 @@ export async function handleCompletion(req: Request, kind: Kind, opts: GatewayOp
         const text = typeof resp.message.content === 'string' ? resp.message.content : JSON.stringify(resp.message.content ?? '');
         const calls = resp.message.tool_calls ?? [];
         const segs: Segment[] = [...(text.trim() ? [{ source: 'model answer' as const, text }] : []), ...calls.map((c) => ({ source: 'tool call' as const, text: `${c.function?.name ?? 'tool'}(${c.function?.arguments ?? ''})` }))];
+        if (early?.cancelled) {
+          finish('error', 499, 'Client went away');
+          return new Response(null, { status: 499 });
+        }
+        early?.status('\nChecking the answer…', `checking answer #${attempt}`);
         const check = await runPipeline({
           segments: segs,
           layers: outLayers,
@@ -484,7 +515,7 @@ export async function handleCompletion(req: Request, kind: Kind, opts: GatewayOp
         return block(layer?.onFail === 'retry' ? `${check.block.reason} (still failing after ${layer.retries ?? 2} retries)` : check.block.reason, {});
       }
     };
-    if (!stream) return produce();
+    if (!stream || early?.active) return produce();
     // Streaming clients wait for the checked answer; keep-alive comments keep the connection open.
     const enc = new TextEncoder();
     const out = new ReadableStream<Uint8Array>({

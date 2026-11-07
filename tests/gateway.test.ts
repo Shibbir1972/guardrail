@@ -444,6 +444,9 @@ describe('gateway', () => {
       expect(sse.trim().endsWith('data: [DONE]')).toBe(true);
     });
 
+    // Like a real client (Cline): no Studio source, so the reply stream opens before the checks finish.
+    const askLive = (layers: unknown[], content: string) =>
+      handleCompletion(new Request('http://gw/v1/chat/completions', { method: 'POST', body: JSON.stringify({ model: 'qwen3-coder-30b', stream: true, stream_options: { include_usage: true }, messages: [{ role: 'user', content }] }) }), 'chat', { key: key(), layers: layers as never });
     const events = (sse: string) => sse.split('\n').filter((l) => l.startsWith('data: ') && !l.includes('[DONE]')).map((l) => JSON.parse(l.slice(6)) as { choices?: { delta?: { role?: string; content?: string; reasoning_content?: string } }[] });
     const part = (e: ReturnType<typeof events>[number], k: 'content' | 'reasoning_content') => e.choices?.[0]?.delta?.[k] ?? '';
 
@@ -477,6 +480,32 @@ describe('gateway', () => {
       const ev = events(sse);
       expect(ev.map((e) => part(e, 'reasoning_content')).join('')).toContain('Thinking about it.');
       expect(ev.map((e) => part(e, 'content')).join('')).toContain('Opsara stopped this request');
+      expect(sse).not.toContain('Mock answer from');
+      expect(lastLog().outcome).toBe('blocked');
+    });
+
+    it('opens the stream at once and narrates each wait as thinking', async () => {
+      const out = normalizeLayer({ id: 'out', name: 'Answer check', type: 'patterns', stage: 'output', onFail: 'retry', retries: 1 });
+      const sse = await (await askLive([out], 'write a unit test')).text();
+      const ev = events(sse);
+      expect(ev[0].choices?.[0]?.delta?.role).toBe('assistant');
+      const thinking = ev.map((e) => part(e, 'reasoning_content')).join('');
+      const at = (t: string) => thinking.indexOf(t);
+      expect(at('Security check: reading your request')).toBeGreaterThanOrEqual(0);
+      expect(at('Request approved. Asking the model')).toBeGreaterThan(at('Security check: reading your request'));
+      expect(at('Checking the answer')).toBeGreaterThan(at('Request approved. Asking the model'));
+      expect(ev.filter((e) => e.choices?.[0]?.delta?.role === 'assistant')).toHaveLength(1);
+      expect(ev.map((e) => part(e, 'content')).join('')).toContain('Mock answer from qwen3-coder-30b');
+      expect(sse.trim().endsWith('data: [DONE]')).toBe(true);
+    });
+
+    it('a request blocked before the model shows the checking line, then the blocked reply, with one role chunk', async () => {
+      const inp = normalizeLayer({ id: 'in', name: 'Patterns', type: 'patterns', onFail: 'block', threshold: 0.7 });
+      const sse = await (await askLive([inp], bad)).text();
+      const ev = events(sse);
+      expect(ev.map((e) => part(e, 'reasoning_content')).join('')).toContain('Security check: reading your request');
+      expect(ev.map((e) => part(e, 'content')).join('')).toContain('Opsara stopped this request');
+      expect(ev.filter((e) => e.choices?.[0]?.delta?.role === 'assistant')).toHaveLength(1);
       expect(sse).not.toContain('Mock answer from');
       expect(lastLog().outcome).toBe('blocked');
     });

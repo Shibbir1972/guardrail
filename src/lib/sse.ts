@@ -2,7 +2,7 @@
  * A blocked request still gets a normal assistant reply, so agents like Cline show
  * it in the chat instead of retrying or surfacing a raw error.
  */
-export function blockedResponse(opts: { stream: boolean; model: string; text: string; requestId: string; kind: 'chat' | 'completions' }) {
+export function blockedResponse(opts: { stream: boolean; model: string; text: string; requestId: string; kind: 'chat' | 'completions'; roleSent?: boolean }) {
   const created = Math.floor(Date.now() / 1000);
   const id = `chatcmpl-${opts.requestId}`;
   const headers = { 'x-guardrail-request-id': opts.requestId, 'x-opsara-request-id': opts.requestId, 'x-guardrail-blocked': '1', 'x-opsara-blocked': '1' };
@@ -32,7 +32,7 @@ export function blockedResponse(opts: { stream: boolean; model: string; text: st
   const stream = new ReadableStream<Uint8Array>({
     start(c) {
       const send = (o: unknown) => c.enqueue(enc.encode(`data: ${JSON.stringify(o)}\n\n`));
-      if (opts.kind === 'chat') send(chunk({ role: 'assistant', content: '' }, null));
+      if (opts.kind === 'chat' && !opts.roleSent) send(chunk({ role: 'assistant', content: '' }, null));
       for (const p of pieces) send(opts.kind === 'chat' ? chunk({ content: p }, null) : chunk(null, null, p));
       send(chunk({}, 'stop'));
       c.enqueue(enc.encode('data: [DONE]\n\n'));
