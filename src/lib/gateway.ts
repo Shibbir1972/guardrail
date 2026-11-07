@@ -122,6 +122,17 @@ export function allowedRoutes(key: ApiKey, eff: Effective) {
   return { byModel, groupChain };
 }
 
+/**
+ * The body for the buffered call that after-the-model layers make: the answer is collected whole, so it is
+ * not streamed. vLLM (and others) reject `stream_options` unless `stream` is true, and streaming clients such
+ * as Cline always send it, so it is dropped here.
+ */
+export function nonStreaming(b: Record<string, unknown>): Record<string, unknown> {
+  const rest = { ...b, stream: false };
+  delete rest.stream_options;
+  return rest;
+}
+
 export async function handleCompletion(req: Request, kind: Kind, opts: GatewayOptions = {}): Promise<Response> {
   const id = newRequestId();
   const trace = opts.trace ?? {};
@@ -370,7 +381,7 @@ export async function handleCompletion(req: Request, kind: Kind, opts: GatewayOp
         const t0 = at();
         let up: Response;
         try {
-          up = await fetch(`${r.server.url}/v1/chat/completions`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(r.server.api_key ? { Authorization: `Bearer ${r.server.api_key}` } : {}) }, body: JSON.stringify({ ...b, stream: false }), signal: req.signal });
+          up = await fetch(`${r.server.url}/v1/chat/completions`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(r.server.api_key ? { Authorization: `Bearer ${r.server.api_key}` } : {}) }, body: JSON.stringify(nonStreaming(b)), signal: req.signal });
         } catch (e) {
           markDown(r.server.id, e);
           steps.push({ tone: 'warn', head: `${r.server.name} unreachable`, ms: at(), text: errMsg(e) });

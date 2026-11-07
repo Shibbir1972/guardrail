@@ -73,6 +73,8 @@ const server = http.createServer(async (req, res) => {
 
   const chat = url.pathname === '/v1/chat/completions';
   const messages = chat ? body.messages ?? [] : [{ role: 'user', content: body.prompt }];
+  // Like vLLM: stream_options is only valid together with stream: true.
+  if (body.stream_options && !body.stream) return send(res, 400, { error: { message: 'Stream options can only be defined when `stream=True`. (parameter=stream_options)', type: 'BadRequestError', param: 'stream_options', code: 400 } });
   // Count a prefix-cache hit when the first message repeats.
   const prefix = text(messages[0]?.content).slice(0, 2000);
   queries += 1;
