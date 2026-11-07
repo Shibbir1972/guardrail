@@ -100,7 +100,7 @@ export class EarlyStream {
       },
       cancel: () => this.leave(),
     });
-    return new Response(body, { status: 200, headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive', 'x-guardrail-request-id': this.id, 'x-opsara-request-id': this.id } });
+    return new Response(body, { status: 200, headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'x-guardrail-request-id': this.id, 'x-opsara-request-id': this.id } });
   }
 
   private fail(message: string, type = 'api_error', code: string | number | null = null) {

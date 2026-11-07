@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { EarlyStream } from '@/lib/early-stream';
+import { blockedResponse, sseFromJson } from '@/lib/sse';
 
 const read = async (r: ReadableStreamDefaultReader<Uint8Array>) => new TextDecoder().decode((await r.read()).value);
 
@@ -38,5 +39,17 @@ describe('EarlyStream', () => {
     expect(left).toMatchObject({ phase: 'checking the answer' });
     expect(e.cancelled).toBe(true);
     expect(() => e.think('more')).not.toThrow();
+  });
+
+  // A forced "Connection: keep-alive" makes Node keep a socket open that the client asked to close
+  // (Connection: close). A client or tunnel that then reuses it gets "400 Bad Request" from Node's parser.
+  it('never sets the Connection header itself, so Node answers according to the request', async () => {
+    const e = new EarlyStream();
+    e.open({ id: 'req_4', model: 'm' });
+    const early = e.response(Promise.resolve(new Response('data: [DONE]\n\n', { headers: { 'content-type': 'text/event-stream' } })));
+    await early.text();
+    const blocked = blockedResponse({ stream: true, model: 'm', text: 'no', requestId: 'req_5', kind: 'chat' });
+    const checked = sseFromJson({ choices: [{ message: { content: 'hi' }, finish_reason: 'stop' }] }, { requestId: 'req_6', kind: 'chat' });
+    for (const r of [early, blocked, checked]) expect(r.headers.get('connection')).toBeNull();
   });
 });

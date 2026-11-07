@@ -39,7 +39,7 @@ export function blockedResponse(opts: { stream: boolean; model: string; text: st
       c.close();
     },
   });
-  return new Response(stream, { headers: { ...headers, 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' } });
+  return new Response(stream, { headers: { ...headers, 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' } });
 }
 
 /** OpenAI-shaped error body. */

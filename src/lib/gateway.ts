@@ -549,7 +549,7 @@ async function run(req: Request, kind: Kind, opts: GatewayOptions, early: EarlyS
         }
       },
     });
-    return new Response(out, { status: 200, headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive', 'x-guardrail-request-id': id, 'x-opsara-request-id': id } });
+    return new Response(out, { status: 200, headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'x-guardrail-request-id': id, 'x-opsara-request-id': id } });
   }
 
   emit?.({ type: 'model', attempt: 1, model });
@@ -639,7 +639,7 @@ async function run(req: Request, kind: Kind, opts: GatewayOptions, early: EarlyS
     });
     return new Response(out, {
       status: 200,
-      headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive', 'x-guardrail-request-id': id, 'x-opsara-request-id': id },
+      headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'x-guardrail-request-id': id, 'x-opsara-request-id': id },
     });
   }
   const msg = `No server for ${model} is reachable right now.`;
