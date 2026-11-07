@@ -128,7 +128,7 @@ export function allowedRoutes(key: ApiKey, eff: Effective) {
  * as Cline always send it, so it is dropped here.
  */
 export function nonStreaming(b: Record<string, unknown>): Record<string, unknown> {
-  const rest = { ...b, stream: false };
+  const rest: Record<string, unknown> = { ...b, stream: false };
   delete rest.stream_options;
   return rest;
 }
