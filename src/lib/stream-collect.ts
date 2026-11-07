@@ -17,6 +17,8 @@ export class StreamCollector {
   private tail = '';
   /** The backend that answered (OpenRouter puts "provider" on each chunk). */
   provider: string | null = null;
+  /** Called with each piece of reasoning ("thinking") as it arrives, so a caller can pass it on live. */
+  onReasoning?: (text: string) => void;
 
   /** Feed raw text from the stream; it may split lines anywhere. */
   push(chunk: string) {
@@ -56,7 +58,10 @@ export class StreamCollector {
     if (!d) return;
     if (typeof d.content === 'string') this.add('content', d.content);
     const r = d.reasoning ?? d.reasoning_content;
-    if (typeof r === 'string') this.add('reasoning', r);
+    if (typeof r === 'string') {
+      this.add('reasoning', r);
+      if (r) this.onReasoning?.(r);
+    }
     for (const tc of d.tool_calls ?? []) {
       const i = tc.index ?? this.tools.length;
       const cur = (this.tools[i] ??= { function: { arguments: '' } });

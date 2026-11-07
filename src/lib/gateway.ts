@@ -376,12 +376,16 @@ export async function handleCompletion(req: Request, kind: Kind, opts: GatewayOp
   // answer can go back to the model with the reason as feedback (the conversation stays a prefix,
   // so the provider cache is reused), up to the layer's retries; then it is blocked or let through.
   if (outLayers.length) {
+    // For a streaming client the model is streamed internally: its thinking (reasoning) is passed on to the client
+    // right away, because it is never executed. The answer text and tool calls are held until the checks pass.
+    let live: ((text: string) => void) | null = null;
+    let roleSent = false;
     const callOnce = async (b: Record<string, unknown>): Promise<Record<string, unknown> | Response> => {
       for (const r of routes) {
         const t0 = at();
         let up: Response;
         try {
-          up = await fetch(`${r.server.url}/v1/chat/completions`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(r.server.api_key ? { Authorization: `Bearer ${r.server.api_key}` } : {}) }, body: JSON.stringify(nonStreaming(b)), signal: req.signal });
+          up = await fetch(`${r.server.url}/v1/chat/completions`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(r.server.api_key ? { Authorization: `Bearer ${r.server.api_key}` } : {}) }, body: JSON.stringify(live ? { ...b, stream: true, stream_options: { include_usage: true } } : nonStreaming(b)), signal: req.signal });
         } catch (e) {
           markDown(r.server.id, e);
           steps.push({ tone: 'warn', head: `${r.server.name} unreachable`, ms: at(), text: errMsg(e) });
@@ -395,7 +399,27 @@ export async function handleCompletion(req: Request, kind: Kind, opts: GatewayOp
           finish('error', up.status, `Backend error ${up.status}`, { response: { message: { role: 'assistant', content: '' }, error: text.slice(0, 4000) } });
           return new Response(text, { status: up.status, headers: { 'Content-Type': up.headers.get('content-type') ?? 'application/json', 'x-guardrail-request-id': id, 'x-opsara-request-id': id } });
         }
-        const json = (await up.json()) as Record<string, unknown>;
+        let json: Record<string, unknown>;
+        if (live && up.body) {
+          const collect = new StreamCollector();
+          collect.onReasoning = live;
+          const reader = up.body.getReader();
+          const dec = new TextDecoder();
+          try {
+            for (;;) {
+              const { value, done } = await reader.read();
+              if (done) break;
+              collect.push(dec.decode(value, { stream: true }));
+            }
+          } catch (e) {
+            markDown(r.server.id, e);
+            steps.push({ tone: 'warn', head: `${r.server.name} stream broke`, ms: at(), text: errMsg(e) });
+            continue;
+          }
+          const got = collect.result();
+          const { reasoning, ...message } = got.message as typeof got.message & { reasoning?: string };
+          json = { id: `chatcmpl-${id}`, object: 'chat.completion', created: Math.floor(Date.now() / 1000), model, choices: [{ index: 0, message: { ...message, ...(reasoning ? { reasoning_content: reasoning } : {}) }, finish_reason: got.finish_reason }], ...(got.usage ? { usage: got.usage } : {}), ...(collect.provider ? { provider: collect.provider } : {}) };
+        } else json = (await up.json()) as Record<string, unknown>;
         if (typeof json.provider === 'string') lastProvider.set(`${r.server.id}::${model}`, json.provider);
         return json;
       }
@@ -406,8 +430,10 @@ export async function handleCompletion(req: Request, kind: Kind, opts: GatewayOp
     const produce = async (): Promise<Response> => {
       let msgs = body.messages as Msg[];
       const outResults: LayerResult[] = [];
+      let retryNote = '';
       for (let attempt = 1; ; attempt++) {
         emit?.({ type: 'model', attempt, model });
+        if (attempt > 1 && live) live(`\n\n[Security check: the previous answer was rejected (${retryNote}). Asking the model again.]\n\n`);
         const json = await callOnce({ ...body, messages: msgs });
         if (json instanceof Response) return json;
         // Retries go to the provider that just answered, whose cache now holds this conversation.
@@ -435,7 +461,7 @@ export async function handleCompletion(req: Request, kind: Kind, opts: GatewayOp
         if (!check.block) {
           steps.push({ tone: flagged.length ? 'warn' : 'ok', head: `Answer #${attempt} checked: ${flagged.length ? `flagged by ${flagged.map((x) => x.name).join(', ')}` : 'passed'}`, ms: at(), text: `${outLayers.length} after-the-model layer(s) checked it before the client saw it.` });
           finish(outcome, 200, null, { tokens_out: (json.usage as { completion_tokens?: number } | undefined)?.completion_tokens ?? null, response: resp });
-          return stream ? sseFromJson(json, { requestId: id, kind: 'chat' }) : Response.json(json, { headers: { 'x-guardrail-request-id': id, 'x-opsara-request-id': id, 'x-guardrail-checked': '1' } });
+          return stream ? sseFromJson(json, { requestId: id, kind: 'chat', roleSent }) : Response.json(json, { headers: { 'x-guardrail-request-id': id, 'x-opsara-request-id': id, 'x-guardrail-checked': '1' } });
         }
         const layer = outLayers.find((l) => l.name === check.block!.layer);
         const d = check.results.find((x) => x.action === 'block')?.decision;
@@ -445,6 +471,7 @@ export async function handleCompletion(req: Request, kind: Kind, opts: GatewayOp
             .replace(/\{reason\}/g, check.block.reason.replace(/[.\s]+$/, ''))
             .replace(/\{categories\}/g, d?.categories.join(', ') || 'none')
             .replace(/\{verdict\}/g, d?.verdict ?? 'block');
+          retryNote = check.block.reason.replace(/[.\s]+$/, '');
           msgs = [...msgs, resp.message as Msg, { role: 'user', content: feedback }];
           steps.push({ tone: 'neutral', head: `Asked the model to fix it (retry ${attempt} of ${layer.retries ?? 2})`, ms: at(), text: feedback });
           continue;
@@ -452,7 +479,7 @@ export async function handleCompletion(req: Request, kind: Kind, opts: GatewayOp
         if (layer?.onFail === 'retry' && layer.onExhausted === 'flag') {
           steps.push({ tone: 'warn', head: 'Retries used up: answer let through, flagged', ms: at(), text: check.block.reason });
           finish('false_alarm', 200, check.block.reason, { tokens_out: (json.usage as { completion_tokens?: number } | undefined)?.completion_tokens ?? null, response: resp });
-          return stream ? sseFromJson(json, { requestId: id, kind: 'chat' }) : Response.json(json, { headers: { 'x-guardrail-request-id': id, 'x-opsara-request-id': id } });
+          return stream ? sseFromJson(json, { requestId: id, kind: 'chat', roleSent }) : Response.json(json, { headers: { 'x-guardrail-request-id': id, 'x-opsara-request-id': id } });
         }
         return block(layer?.onFail === 'retry' ? `${check.block.reason} (still failing after ${layer.retries ?? 2} retries)` : check.block.reason, {});
       }
@@ -463,6 +490,15 @@ export async function handleCompletion(req: Request, kind: Kind, opts: GatewayOp
     const out = new ReadableStream<Uint8Array>({
       async start(c) {
         const t = setInterval(() => c.enqueue(enc.encode(': checking the answer\n\n')), 5000);
+        const created = Math.floor(Date.now() / 1000);
+        live = (text) => {
+          const chunk = (delta: Record<string, unknown>) => `data: ${JSON.stringify({ id: `chatcmpl-${id}`, object: 'chat.completion.chunk', created, model, choices: [{ index: 0, delta, finish_reason: null }] })}\n\n`;
+          if (!roleSent) {
+            roleSent = true;
+            c.enqueue(enc.encode(chunk({ role: 'assistant', content: '' })));
+          }
+          c.enqueue(enc.encode(chunk({ reasoning_content: text })));
+        };
         try {
           const r = await produce();
           clearInterval(t);

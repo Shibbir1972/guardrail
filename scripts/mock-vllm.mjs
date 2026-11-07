@@ -120,6 +120,8 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' });
     const chunk = (o) => res.write(`data: ${JSON.stringify(o)}\n\n`);
     if (chat) chunk({ id, object: 'chat.completion.chunk', created, model: body.model, choices: [{ index: 0, delta: { role: 'assistant', content: '' }, finish_reason: null }] });
+    // Like a reasoning model: some thinking first, as reasoning_content, then the answer.
+    if (chat && !body.model.includes('safeguard')) for (const w of ['Thinking ', 'about ', 'it. ']) chunk({ id, object: 'chat.completion.chunk', created, model: body.model, choices: [{ index: 0, delta: { reasoning_content: w }, finish_reason: null }] });
     for (const w of words) {
       chunk(chat ? { id, object: 'chat.completion.chunk', created, model: body.model, choices: [{ index: 0, delta: { content: w }, finish_reason: null }] } : { id, object: 'text_completion', created, model: body.model, choices: [{ index: 0, text: w, finish_reason: null }] });
       await new Promise((r) => setTimeout(r, TOKEN_MS));

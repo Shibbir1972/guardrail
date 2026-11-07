@@ -45,15 +45,21 @@ the provider that just answered (see [caching.md](caching.md)).
 
 ## Streaming
 
-A streaming client can't be shown an answer that might still be rejected. So for requests with
-output layers, Opsara:
+A streaming client can't be shown an answer that might still be rejected: tokens that have been sent
+can't be taken back. But the model's **thinking** (`reasoning_content`) is never executed, so it is
+passed on live. For requests with output layers, Opsara:
 
-1. Calls the model and collects the full answer, including its tool calls and reasoning.
-2. Runs the output layers, retrying if needed.
+1. Streams the model's reply internally. The thinking goes to the client as it arrives, so an agent
+   such as Cline shows it as usual. The answer text and the tool calls are held back.
+2. Runs the output layers on the complete answer, retrying if needed. Each retry adds a line to the
+   thinking stream (`[Security check: the previous answer was rejected (reason). Asking the model again.]`)
+   and then streams the new attempt's thinking.
 3. Sends SSE keep-alive comments while it waits, so the client doesn't time out.
-4. Sends the approved answer as a normal `chat.completion.chunk` stream, ending with `[DONE]`.
+4. Releases the approved answer text and tool calls, ending with the usage and `[DONE]`. A rejected
+   answer is never sent.
 
-Requests without output layers stream straight through, unbuffered.
+Requests without output layers stream straight through, unbuffered. Clients that don't stream get the
+checked answer as one JSON reply, as before.
 
 ## Placement
 

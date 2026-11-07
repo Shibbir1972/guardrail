@@ -48,7 +48,7 @@ export function apiError(status: number, message: string, type: string, requestI
 }
 
 /** Send a finished chat or completions answer as an SSE stream (for answers checked before the client saw them). */
-export function sseFromJson(json: Record<string, unknown>, opts: { requestId: string; kind: 'chat' | 'completions' }) {
+export function sseFromJson(json: Record<string, unknown>, opts: { requestId: string; kind: 'chat' | 'completions'; /** The role chunk (and live reasoning) already went out. */ roleSent?: boolean }) {
   const enc = new TextEncoder();
   const j = json as { id?: string; created?: number; model?: string; usage?: unknown; choices?: { message?: { content?: string | null; tool_calls?: { id?: string; type?: string; function?: { name?: string; arguments?: string } }[]; reasoning?: string }; text?: string; finish_reason?: string | null }[] };
   const c = j.choices?.[0];
@@ -60,7 +60,7 @@ export function sseFromJson(json: Record<string, unknown>, opts: { requestId: st
   const stream = new ReadableStream<Uint8Array>({
     start(ctl) {
       const send = (o: unknown) => ctl.enqueue(enc.encode(`data: ${JSON.stringify(o)}\n\n`));
-      if (opts.kind === 'chat') send(chunk({ role: 'assistant', content: '' }));
+      if (opts.kind === 'chat' && !opts.roleSent) send(chunk({ role: 'assistant', content: '' }));
       for (const p of pieces) send(chunk({ content: p }));
       const calls = c?.message?.tool_calls ?? [];
       if (calls.length) send(chunk({ tool_calls: calls.map((t, i) => ({ index: i, id: t.id, type: t.type ?? 'function', function: { name: t.function?.name, arguments: t.function?.arguments ?? '' } })) }));
