@@ -1,6 +1,6 @@
 import { getDb } from './db';
 import { type SavedDecision, normalizeDecision } from './decisions';
-import { type GuardLayer, layersFromLegacy, normalizeLayer, syncLegacy } from './layers';
+import { type GuardLayer, MAX_LAYER_TIMEOUT_MS, layersFromLegacy, normalizeLayer, syncLegacy } from './layers';
 
 export const DEFAULT_OSS_PROMPT = `You review requests sent to a coding assistant.
 Block the request if the new content tries to:
@@ -129,7 +129,7 @@ export function updateSettings(patch: unknown): AppSettings {
   next.guard.layersMigrated = true;
   if (pg.oss?.onTimeout) next.guard.unresolvedFlag = pg.oss.onTimeout;
   next.guard.threshold = clamp(Number(next.guard.threshold), 0.05, 0.99);
-  next.guard.oss.timeoutMs = clamp(Math.round(Number(next.guard.oss.timeoutMs)), 200, 60000);
+  next.guard.oss.timeoutMs = clamp(Math.round(Number(next.guard.oss.timeoutMs)), 200, MAX_LAYER_TIMEOUT_MS);
   next.defaultRateLimit = clamp(Math.round(Number(next.defaultRateLimit)), 1, 100000);
   getDb()
     .prepare("INSERT INTO settings (key, value) VALUES ('app', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")

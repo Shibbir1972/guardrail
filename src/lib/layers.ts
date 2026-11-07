@@ -76,6 +76,9 @@ export interface GuardLayer {
 /** The feedback sent with a rejected answer (after-the-model layers that retry). */
 export const RETRY_PROMPT = 'Your previous answer was rejected by a safety check: {reason}. Please answer again without that problem.';
 
+/** The longest time limit a layer may have (10 minutes). Long suffix checks on big conversations can need minutes. */
+export const MAX_LAYER_TIMEOUT_MS = 600_000;
+
 export const LAYER_DEFAULTS: Omit<GuardLayer, 'id' | 'name' | 'type'> = {
   enabled: true,
   adapter: 'auto',
@@ -124,7 +127,7 @@ export function normalizeLayer(raw: Partial<GuardLayer>, i = 0): GuardLayer {
     retryPrompt: String(raw.retryPrompt ?? '').trim() || RETRY_PROMPT,
     toolCallsOnly: raw.toolCallsOnly === true,
     onError: pick(raw.onError, ['allow', 'block', 'patterns'] as const, 'block'),
-    timeoutMs: Math.round(clamp(raw.timeoutMs, 200, 60000, LAYER_DEFAULTS.timeoutMs)),
+    timeoutMs: Math.round(clamp(raw.timeoutMs, 200, MAX_LAYER_TIMEOUT_MS, LAYER_DEFAULTS.timeoutMs)),
     reasoningEffort: pick(raw.reasoningEffort, ['low', 'medium', 'high'] as const, 'low'),
     mapping: raw.mapping ? normalizeMapping(raw.mapping) : null,
     decision: raw.decision ? normalizeDecision(raw.decision) : null,

@@ -28,7 +28,7 @@ itself and its sub-groups ("same as parent / on / off"), like every other group 
 | Runs on | `all`: every request. `flagged`: only when an earlier layer flagged it, or every request when no earlier layer screened it. |
 | When it says no | `block` stops the request with the blocked reply. `flag` passes it on as flagged to later layers. `redact` replaces the matches with `[REDACTED]` and continues. |
 | If it fails | `allow`, `block`, or (for scoring layers) fall back to the built-in patterns. |
-| Time limit | Per call. |
+| Time limit | Per call, from 0.2 s up to 10 minutes. A suffix check reads the whole conversation, so give it a generous limit. |
 | When it runs | `input` (before the model, default) or `output` (checks the answer; see [after-model-checks.md](after-model-checks.md)). Output layers add **retry**, **Retries**, **When retries run out**, **Retry prompt** and **Only tool calls**. |
 | Where the check goes | `prefix` (layer prompt, then the content) or `suffix` (the request exactly as the model gets it, then the question). With **Use the request's model**, the check shares the model call's prompt cache; see [caching.md](caching.md). |
 | What this layer reads | New user message, new tool results, the agent's system prompt. Empty uses the global default on the Guard checks page. |

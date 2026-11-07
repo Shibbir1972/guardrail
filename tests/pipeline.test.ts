@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseClassify, parseJudge, parseLlamaGuard, parseModeration, parseText, parseYesNo, detectAdapter, callAdapter } from '@/lib/adapters';
 import { resolveLayers } from '@/lib/groups';
-import { layersFromLegacy, normalizeLayer, syncLegacy } from '@/lib/layers';
+import { MAX_LAYER_TIMEOUT_MS, layersFromLegacy, normalizeLayer, syncLegacy } from '@/lib/layers';
 import { applyRedactions, runPipeline } from '@/lib/pipeline';
 import { DEFAULT_SETTINGS } from '@/lib/settings';
 import type { Segment } from '@/lib/guard';
@@ -264,5 +264,15 @@ describe('suffix placement (cache-friendly checks)', () => {
     const m = withCacheBreakpoint([{ role: 'system', content: 'S' }, { role: 'user', content: 'U' }]);
     expect(m[0]).toEqual({ role: 'system', content: 'S' });
     expect(m[1]).toEqual({ role: 'user', content: [{ type: 'text', text: 'U', cache_control: { type: 'ephemeral' } }] });
+  });
+});
+
+describe('layer time limit', () => {
+  it('allows up to 10 minutes and clamps anything outside 0.2 s to 10 min', () => {
+    expect(MAX_LAYER_TIMEOUT_MS).toBe(600_000);
+    expect(normalizeLayer({ type: 'judge', timeoutMs: 120_000 }).timeoutMs).toBe(120_000);
+    expect(normalizeLayer({ type: 'judge', timeoutMs: 600_000 }).timeoutMs).toBe(600_000);
+    expect(normalizeLayer({ type: 'judge', timeoutMs: 900_000 }).timeoutMs).toBe(600_000);
+    expect(normalizeLayer({ type: 'judge', timeoutMs: 10 }).timeoutMs).toBe(200);
   });
 });
