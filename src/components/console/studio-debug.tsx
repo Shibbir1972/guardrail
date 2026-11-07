@@ -1,6 +1,7 @@
 'use client';
 
-import { cacheOf } from '@/lib/adapters';
+import { type CacheUse, cacheOf } from '@/lib/adapters';
+import { NOT_REPORTED, cacheLine } from '@/lib/cache-text';
 import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { ScenarioSettings } from '@/lib/studio';
 import type { Plan } from '@/lib/studio-plan';
@@ -50,11 +51,11 @@ type LiveEvent =
   | { type: 'step'; step: { tone: string; head: string; text: string; ms: number } }
   | { type: 'layer'; phase: 'start' | 'done'; id: string; name: string; n: number; stage: 'input' | 'output'; attempt?: number; result?: { action: string; decision?: { score?: number | null; latency_ms?: number; reason?: string; error?: string; cache?: { cached: number; prompt: number } | null; cost?: number | null } | null } }
   | { type: 'model'; attempt: number; model: string }
-  | { type: 'draft'; attempt: number; text: string; toolCalls: number; cache: { cached: number; prompt: number } | null; cost: number | null }
+  | { type: 'draft'; attempt: number; text: string; toolCalls: number; cache: CacheUse | null; cost: number | null }
   | { type: 'token'; text: string };
 
 const money = (n: number) => (n >= 0.01 ? `$${n.toFixed(4)}` : `$${n.toPrecision(2)}`);
-const cacheText = (c?: { cached: number; prompt: number } | null) => (c && c.prompt ? `cache ${c.cached.toLocaleString()}/${c.prompt.toLocaleString()}` : '');
+const cacheText = (c?: CacheUse | null) => (c && c.prompt ? (c.cached === null ? `cache: ${NOT_REPORTED}` : `cache ${c.cached.toLocaleString()}/${c.prompt.toLocaleString()}`) : '');
 
 /** Fold one live event into the progress shown while a message is being sent. */
 export function applyLive(s: LiveState, e: LiveEvent): LiveState {
@@ -441,7 +442,7 @@ function TurnView({ logId, raw }: { logId: string; raw?: string }) {
                   ['Fallback used', r.fellBack ? 'yes' : 'no'],
                   ['Read', r.read?.length ? r.read.join(', ') : '–'],
                   ['Placement', r.decision.suffix ? `suffix, with ${r.decision.suffix.model}` : 'prefix'],
-                  ['Prompt cache', r.decision.cache ? `${r.decision.cache.cached.toLocaleString()} of ${r.decision.cache.prompt.toLocaleString()} tokens` : '–'],
+                  ['Prompt cache', r.decision.cache ? cacheLine(r.decision.cache) : '–'],
                   ...(r.decision.error ? ([['Error', r.decision.error]] as [string, ReactNode][]) : []),
                 ]}
               />
@@ -466,7 +467,7 @@ function TurnView({ logId, raw }: { logId: string; raw?: string }) {
         ) : undefined}
       </Stage>
       <Stage mark={!reached('upstream') ? 'skip' : log.outcome === 'error' ? 'error' : 'pass'} title="Model call" answer={!reached('upstream') ? 'not called' : `${log.server ?? '–'} · ${ms(log.stages?.upstream ?? null)}`}>
-        <KV rows={[['Model', log.model ?? '–'], ['Server', log.server ?? '–'], ['Upstream time', ms(log.stages?.upstream ?? null)], ['Tokens out', fmt(log.tokens_out)], ['Prompt cache', (() => { const c = cacheOf(log.response); return c ? `${c.cached.toLocaleString()} of ${c.prompt.toLocaleString()} tokens` : '–'; })()], ['HTTP', log.status_code ?? '–']]} />
+        <KV rows={[['Model', log.model ?? '–'], ['Server', log.server ?? '–'], ['Upstream time', ms(log.stages?.upstream ?? null)], ['Tokens out', fmt(log.tokens_out)], ['Prompt cache', (() => { const c = cacheOf(log.response); return c ? cacheLine(c) : '–'; })()], ['HTTP', log.status_code ?? '–']]} />
         {upstream.length > 0 && <Timeline steps={upstream} />}
       </Stage>
       <Stage mark={log.outcome === 'blocked' || log.outcome === 'rejected' ? 'block' : log.outcome === 'error' ? 'error' : log.outcome === 'answered' ? 'pass' : 'flag'} title="Outcome" answer={label} />

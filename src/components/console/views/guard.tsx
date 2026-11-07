@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { ADAPTERS, type AdapterId, type Decision } from '@/lib/adapters';
+import { NOT_REPORTED } from '@/lib/cache-text';
 import type { Scan } from '@/lib/guard';
 import { type GuardLayer, LAYER_TYPES, adapterFor, autoAdapter, canSuffix, decisionFor, mappingFor, normalizeLayer } from '@/lib/layers';
 import { type CustomMapping, PRESETS, parseMapped, presetFor, withPreset } from '@/lib/mapping';
@@ -433,7 +434,7 @@ export function DecisionRow({ r }: { r: LayerResult }) {
         {r.read && r.read.length > 0 && <span className="cx-muted small" title="What this layer read">read: {r.read.join(', ')}</span>}
         {r.stage === 'output' && <Pill tone="info">after the model · answer #{r.attempt ?? 1}</Pill>}
         {d?.suffix && <Pill tone="info">suffix · {d.suffix.model}</Pill>}
-        {d?.cache && <span className="mono cx-muted small" title="Prompt tokens served from the cache">cache {d.cache.cached.toLocaleString()}/{d.cache.prompt.toLocaleString()}</span>}
+        {d?.cache && <span className="mono cx-muted small" title="Prompt tokens served from the cache">{d.cache.cached === null ? `cache: ${NOT_REPORTED}` : `cache ${d.cache.cached.toLocaleString()}/${d.cache.prompt.toLocaleString()}`}</span>}
         {d?.cost ? <span className="mono cx-muted small" title="What this check cost (from the provider)">${d.cost < 0.01 ? d.cost.toPrecision(2) : d.cost.toFixed(4)}</span> : null}
       </summary>
       {d && (
@@ -1092,7 +1093,7 @@ const isLocal = (url: string) => /\/\/(localhost|127\.|10\.|192\.168\.|172\.(1[6
  */
 function PlacementField({ l, set, data, index }: { l: GuardLayer; set: (p: Partial<GuardLayer>) => void; data: Data; index: number }) {
   const suffix = l.placement === 'suffix';
-  const [stats, setStats] = useState<{ calls: number; cached: number; prompt: number; rate: number | null } | null>(null);
+  const [stats, setStats] = useState<{ calls: number; cached: number; prompt: number; unreported?: number; rate: number | null } | null>(null);
   useEffect(() => {
     if (!suffix) return;
     api<typeof stats>(`guard/cache/${l.id}`).then(setStats, () => setStats(null));
@@ -1133,6 +1134,8 @@ function PlacementField({ l, set, data, index }: { l: GuardLayer; set: (p: Parti
             <span>
               Measured: {Math.round((stats.rate ?? 0) * 100)}% of prompt tokens came from the cache over the last {stats.calls} checks ({stats.cached.toLocaleString()} of {stats.prompt.toLocaleString()}).
             </span>
+          ) : stats && (stats.unreported ?? 0) > 0 ? (
+            <span className="cx-muted">The hit rate cannot be measured: the replies of the model server are {NOT_REPORTED}. (For vLLM, start it with --enable-prompt-tokens-details.)</span>
           ) : (
             <span className="cx-muted">No measured checks yet. Hit rates show here once requests go through.</span>
           )}

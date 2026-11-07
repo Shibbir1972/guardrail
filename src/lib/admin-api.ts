@@ -447,20 +447,23 @@ const routes: Record<string, Handler> = {
   'GET guard/cache/:id': ({ params }) => {
     const id = params[0];
     const rows = getDb().prepare("SELECT decisions FROM request_logs WHERE decisions LIKE ? ORDER BY ts DESC LIMIT 200").all(`%"id":"${id.replace(/[%_"]/g, '')}"%`) as { decisions: string }[];
-    let n = 0, cached = 0, prompt = 0;
+    let n = 0, cached = 0, prompt = 0, unreported = 0;
     for (const r of rows) {
       try {
-        const d = (JSON.parse(r.decisions) as { id: string; decision?: { cache?: { cached: number; prompt: number } | null } }[]).find((x) => x.id === id)?.decision?.cache;
+        const d = (JSON.parse(r.decisions) as { id: string; decision?: { cache?: { cached: number | null; prompt: number } | null } }[]).find((x) => x.id === id)?.decision?.cache;
         if (d && d.prompt > 0) {
-          n++;
-          cached += d.cached;
-          prompt += d.prompt;
+          if (d.cached === null || d.cached === undefined) unreported++;
+          else {
+            n++;
+            cached += d.cached;
+            prompt += d.prompt;
+          }
         }
       } catch {
         // skip a broken row
       }
     }
-    return { calls: n, cached, prompt, rate: prompt ? cached / prompt : null };
+    return { calls: n, cached, prompt, unreported, rate: prompt ? cached / prompt : null };
   },
   'POST guard/test': ({ body }) => guardTest(body),
   // The same, as a live event stream: each layer as it starts and finishes, then the result.

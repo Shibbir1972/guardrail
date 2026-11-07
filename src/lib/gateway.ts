@@ -1,5 +1,5 @@
 import { StreamCollector, responseFromJson } from './stream-collect';
-import { cacheOf } from './adapters';
+import { type CacheUse, cacheOf } from './adapters';
 import { buildContextBlock, estimateTokens, filesByIds } from './context';
 import { clientIp as ipOf, ipAllowed } from './ip';
 import { contentText, newSegments, renderBlocked, Segment } from './guard';
@@ -48,7 +48,7 @@ export type LiveEvent =
   | { type: 'step'; step: Step }
   | { type: 'layer'; phase: 'start' | 'done'; id: string; name: string; n: number; stage: 'input' | 'output'; attempt?: number; result?: LayerResult }
   | { type: 'model'; attempt: number; model: string }
-  | { type: 'draft'; attempt: number; text: string; toolCalls: number; cache: { cached: number; prompt: number } | null; cost: number | null };
+  | { type: 'draft'; attempt: number; text: string; toolCalls: number; cache: CacheUse | null; cost: number | null };
 
 export function clientIp(req: Request): string | null {
   return ipOf(req.headers, getSettings().trustProxy);

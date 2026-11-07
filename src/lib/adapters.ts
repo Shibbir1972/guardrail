@@ -24,7 +24,7 @@ export interface Decision {
   /** The option a decision model chose (choice questions), used by router layers. */
   label?: string;
   /** Prompt caching on this call: tokens read from cache out of the prompt's tokens, when the server says. */
-  cache?: { cached: number; prompt: number } | null;
+  cache?: CacheUse | null;
   /** Suffix layers: the check went after the conversation, with this model. */
   suffix?: { model: string };
   /** The backend that answered, when the server says (OpenRouter's "provider"). */
@@ -199,13 +199,22 @@ const JUDGE_SCHEMA = {
   additionalProperties: false,
 };
 
-/** How much of a call's prompt came from the server's cache (OpenAI / OpenRouter / Anthropic-style usage). */
-export function cacheOf(body: unknown): { cached: number; prompt: number } | null {
-  const u = (body as { usage?: { prompt_tokens?: number; input_tokens?: number; prompt_tokens_details?: { cached_tokens?: number }; cache_read_input_tokens?: number } } | null)?.usage;
+/** A call's prompt tokens, and how many of them the server read from its cache; `cached` is null when the server does not say. */
+export type CacheUse = { cached: number | null; prompt: number };
+
+/**
+ * How much of a call's prompt came from the server's cache (OpenAI / OpenRouter / Anthropic-style usage).
+ * A usage reply without a cached-token count (vLLM unless started with --enable-prompt-tokens-details) is
+ * "not reported", not "0 cached": the cache may well have been hit.
+ */
+export function cacheOf(body: unknown): CacheUse | null {
+  const u = (body as { usage?: { prompt_tokens?: number; input_tokens?: number; prompt_tokens_details?: { cached_tokens?: number } | null; cache_read_input_tokens?: number } } | null)?.usage;
   if (!u) return null;
   const prompt = Number(u.prompt_tokens ?? u.input_tokens ?? 0);
-  const cached = Number(u.prompt_tokens_details?.cached_tokens ?? u.cache_read_input_tokens ?? 0);
-  return prompt > 0 ? { cached: Number.isFinite(cached) ? cached : 0, prompt } : null;
+  if (!(prompt > 0)) return null;
+  const reported = u.prompt_tokens_details?.cached_tokens ?? u.cache_read_input_tokens;
+  const cached = reported === undefined || reported === null ? NaN : Number(reported);
+  return { cached: Number.isFinite(cached) ? cached : null, prompt };
 }
 
 /** Suffix placement: the real conversation unchanged, then the check as one last user message. */

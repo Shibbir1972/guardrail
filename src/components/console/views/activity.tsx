@@ -6,6 +6,7 @@ import { diffMarks } from '@/components/prompt-view';
 import type { LayerResult } from '@/lib/pipeline';
 import type { ModelResponse, Step } from '@/lib/logs';
 import { cacheOf } from '@/lib/adapters';
+import { cacheLine } from '@/lib/cache-text';
 import { ChatView, MSG_KINDS, type MsgKind, ResponseTail, countKinds } from '../chat';
 import { Ico } from '../icons';
 import { Empty, Field, Loading, Note, Page, Pill, Section, Seg, Stat, clock, fmt, ms } from '../kit';
@@ -463,11 +464,11 @@ function Summary({ d }: { d: LogEntry }) {
     ['Tokens out', fmt(d.tokens_out)],
     ...((): [string, React.ReactNode][] => {
       const c = cacheOf(d.response);
-      return c ? [['Prompt cache (model call)', `${c.cached.toLocaleString()} of ${c.prompt.toLocaleString()} prompt tokens from cache (${Math.round((c.cached / c.prompt) * 100)}%)${d.response?.provider ? ` · provider ${d.response.provider}` : ''}`]] : [];
+      return c ? [['Prompt cache (model call)', `${cacheLine(c)}${d.response?.provider ? ` · provider ${d.response.provider}` : ''}`]] : [];
     })(),
     ...(d.decisions ?? [])
       .filter((x) => x.decision?.cache)
-      .map((x): [string, React.ReactNode] => [`Prompt cache (${x.name})`, `${x.decision!.cache!.cached.toLocaleString()} of ${x.decision!.cache!.prompt.toLocaleString()} prompt tokens from cache${x.decision!.suffix ? ' · suffix check' : ''}`]),
+      .map((x): [string, React.ReactNode] => [`Prompt cache (${x.name})`, `${cacheLine(x.decision!.cache!)}${x.decision!.suffix ? ' · suffix check' : ''}`]),
   ];
   const stages = Object.entries(d.stages ?? {});
   return (
